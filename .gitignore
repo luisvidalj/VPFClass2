@@ -1,0 +1,45 @@
+# Python bytecode and compiled files
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments (if placed inside project directory)
+.env/
+.venv/
+
+# VSCode project settings
+.vscode/
+
+# Jupyter notebook checkpoints and temp files
+.ipynb_checkpoints/
+*.bak
+*.swp
+*.tmp
+
+# OS metadata files
+.DS_Store
+Thumbs.db
+
+# Data directory (contains raw, intermediate and large files)
+data/
+docs/
+
+# Model artifacts and logs
+*.pkl
+*.pt
+*.h5
+*.ckpt
+*.log
+
+# Output files from bioinformatics tools
+*.tbl
+*.faa
+*.gff
+*.fna
+*.out
+*.csv
+*.tsv
+
+# Backup and temporary files
+*.old
+*.orig
