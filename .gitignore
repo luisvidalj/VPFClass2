@@ -43,3 +43,7 @@ docs/
 # Backup and temporary files
 *.old
 *.orig
+
+
+# Random 
+chatgpt.txt

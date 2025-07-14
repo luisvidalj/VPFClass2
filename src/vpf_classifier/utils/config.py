@@ -5,7 +5,7 @@ import os
 # --------------------------------------------
 # Current MSL release (ej: MSL35, MSL38, MSL40...)
 # --------------------------------------------
-ICTV_RELEASE = os.environ.get("ICTV_RELEASE", "mini_test")
+ICTV_RELEASE = os.environ.get("ICTV_RELEASE", "MSL33")
 
 # --------------------------------------------
 # Base directory
@@ -15,22 +15,25 @@ DATA_DIR = ROOT_DIR / "data"             # data/
 SCRIPTS_DIR = ROOT_DIR / "scripts"
 
 class Files:
+    ICTV_RELEASE = ICTV_RELEASE
     DATA_DIR = DATA_DIR
 
     # (GenBank) FASTA file
-    FASTA = DATA_DIR / f"raw/ICTV_databases/{ICTV_RELEASE}.fasta"
+    FASTA = DATA_DIR / f"raw/ICTV_databases/Fastas/{ICTV_RELEASE}.fasta"
 
     # Prodigal output directory
     PRODIGAL = DATA_DIR / f"raw/prodigal_output/{ICTV_RELEASE}"
 
     # HMM Models (genomad hmm models)
     HMM_MODELS = DATA_DIR / "vpf_models/profiles.hmms"
+    HMM_DICT = DATA_DIR / "vpf_models/vpf_to_index.json"
 
 
     # HMM outputs
     HMM_OUTPUT = DATA_DIR / f"raw/output_hmm_join/{ICTV_RELEASE}"
     HMM_OUTPUT_MULTIPLE = DATA_DIR / f"raw/hmm_output/{ICTV_RELEASE}"
     HMM_TBL = HMM_OUTPUT_MULTIPLE  # Ruta donde buscará archivos .tbl
+    
 
     # ICTV taxonomic CSV file (opcional si tienes uno por release)
     ML = DATA_DIR / f'ICTV_databases/MSLs/{ICTV_RELEASE}.csv'

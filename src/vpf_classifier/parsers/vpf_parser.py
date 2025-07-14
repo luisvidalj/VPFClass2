@@ -7,6 +7,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from typing import Optional
 import glob
 import os
+import json
 
 from vpf_classifier.utils.config import Files
 from vpf_classifier.utils.config import Constants
@@ -42,7 +43,7 @@ class VPF_parser:
                 for queryresult in SearchIO.parse(handle, 'hmmer3-tab'):
                     for hit in queryresult.hits:
                         hits['hmm_name'].append(queryresult.id)
-                        for attrib in attrib:
+                        for attrib in attribs:
                             hits[attrib].append(getattr(hit,attrib))
 
         self.df_hmm = pd.DataFrame(hits)
@@ -52,7 +53,13 @@ class VPF_parser:
             self.df_hmm = self.df_hmm[self.df_hmm['evalue'] < self.evalue]
             print(f"[INFO] Filtered HMM hits by e-value < {self.evalue}: {self.df_hmm.shape[0]} / {original} kept")
 
-        
+
+        self._aggregate_by_virus()
+        self._merge_taxonomy()
+        # self._add_vpf_counts_sparse_optimized()
+        self._add_vpf_counts_sparse_fixed()
+        print("[INFO] Aggregated VPF hit matrix available at .df_virus_hmm")
+
 
     def _aggregate_by_virus(self):
         aux_df = self.df_hmm.copy()
@@ -91,6 +98,44 @@ class VPF_parser:
         self.vpf_unicos = vpf_unicos
         self.vpf_to_index = vpf_to_index
         self.df_virus_hmm['hmms_conteos'] = [self.vpf_sparse_matrix.getrow(i) for i in range(num_virus)]
+
+
+    
+    def _add_vpf_counts_sparse_fixed(self):
+        """
+        Uses a precomputed vpf_to_index dictionary to ensure all vectors have the same length.
+        Builds a fixed-length sparse matrix of VPF counts.
+        """
+        dict_path = Files.DATA_DIR / "vpf_models/vpf_to_index.json"
+        if not dict_path.exists():
+            raise FileNotFoundError(f"[ERROR] Expected dictionary not found at {dict_path}")
+
+        with open(dict_path) as f:
+            vpf_to_index = json.load(f)
+
+        self.vpf_to_index = vpf_to_index
+        vpf_dim = len(vpf_to_index)
+        num_virus = len(self.df_virus_hmm)
+
+        sparse_matrix = lil_matrix((num_virus, vpf_dim), dtype=np.int32)
+
+        missing_vpfs = set()
+
+        for i, row in enumerate(self.df_virus_hmm['hmms_hits']):
+            counts = Counter(row)
+            for vpf, count in counts.items():
+                if vpf in vpf_to_index:
+                    j = vpf_to_index[vpf]
+                    sparse_matrix[i, j] = count
+                else:
+                    missing_vpfs.add(vpf)
+
+        if missing_vpfs:
+            print(f"[WARNING] {len(missing_vpfs)} VPFs found in hits not present in vpf_to_index")
+
+        self.vpf_sparse_matrix = sparse_matrix.tocsr()
+        self.df_virus_hmm['hmms_conteos'] = [self.vpf_sparse_matrix.getrow(i) for i in range(num_virus)]
+
 
     def get_sparse_matrix_from_dataframe(self):
         if 'hmms_conteos' not in self.df_virus_hmm.columns:
