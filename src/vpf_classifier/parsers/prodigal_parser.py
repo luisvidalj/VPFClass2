@@ -21,11 +21,13 @@ class Prodigal:
         faa_candidates = sorted(glob.glob(str(Files.PRODIGAL / "*.faa")))
 
         if faa_candidates:
+            self.parser.run_prodigal()
             self.output_faa = Path(faa_candidates[0])
             if len(faa_candidates) > 1:
                 print(f"[WARNING] Multiple .faa files found in {Files.PRODIGAL}. Using: {self.output_faa.name}")
             else:
                 print(f"[INFO] Using existing Prodigal .faa: {self.output_faa.name}")
+            
         else:
             print("[INFO] No .faa file found. Running Prodigal...")
             self.output_faa = self.parser.run_prodigal()

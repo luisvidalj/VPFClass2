@@ -35,7 +35,7 @@ class VPF_parser:
         attribs = ['id', 'bitscore', 'cluster_num', 'evalue']
         hits = {key: [] for key in ['hmm_name'] + attribs} 
 
-        print("[INFO] Parsing HMMER .tbl files...")
+        print(f"[INFO] Parsing HMMER .tbl files from {Files.HMM_OUTPUT_MULTIPLE}...")
         output_files = glob.glob(os.path.join(hmm_output_folder, "*.tbl"))
 
         for file in output_files:
@@ -106,7 +106,7 @@ class VPF_parser:
         Uses a precomputed vpf_to_index dictionary to ensure all vectors have the same length.
         Builds a fixed-length sparse matrix of VPF counts.
         """
-        dict_path = Files.DATA_DIR / "vpf_models/vpf_to_index.json"
+        dict_path = Files.HMM_DICT
         if not dict_path.exists():
             raise FileNotFoundError(f"[ERROR] Expected dictionary not found at {dict_path}")
 

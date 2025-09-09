@@ -50,11 +50,12 @@ class FastaParser:
         """
         os.makedirs(output_dir, exist_ok=True)
 
-        faa_out = output_dir / "output.faa"
-        gff_out = output_dir / "output.gff"
+        faa_out = output_dir / Files.FAA
+        gff_out = output_dir / Files.GFF
 
         if faa_out.exists() and gff_out.exists():
             print(f"[INFO] Prodigal output already found at {output_dir}")
+            self.faa = faa_out
         else:
             print("[INFO] Running Prodigal in metagenomic mode...")
             cmd = [
@@ -85,6 +86,7 @@ class FastaParser:
         Calls the external shell script to run hmmsearch in parallel.
         """
         if self.faa is None:
+            print(self.faa)
             raise RuntimeError("Protein file (.faa) is missing. Run prodigal first.")
          
         script_path = SCRIPTS_DIR / "run_hmm_parallel.sh"
