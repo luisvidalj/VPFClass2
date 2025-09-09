@@ -44,6 +44,12 @@ docs/
 *.old
 *.orig
 
+# notebooks
+notebooks/
+
 
 # Random 
 chatgpt.txt
+
+# Do not track validation/test experiments
+/tests/
