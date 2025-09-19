@@ -68,3 +68,5 @@ chatgpt.txt
 # dimiss scripts
 /scripts/run_hmmscan_parallel2.sh
 /scripts/run_hmm_scan.sh
+
+/src/vpf_classifier/pipelines/inference_pipeline.py
