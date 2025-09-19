@@ -9,34 +9,54 @@ from vpf_classifier.parsers.fasta_parser import FastaParser
 
 from pathlib import Path
 from vpf_classifier.utils.config import Files
+from pathlib import Path
+from typing import Optional
 import glob
 
 class Prodigal:
-    def __init__(self, parser: FastaParser):
+    # def __init__(self, parser: FastaParser):
+    #     """
+    #     Wraps a FastaParser instance and processes predicted protein sequences from Prodigal output.
+    #     Will run Prodigal only if no .faa file is found in the expected directory.
+    #     """
+    #     self.parser = parser
+    #     faa_candidates = sorted(glob.glob(str(Files.PRODIGAL / "*.faa")))
+
+    #     if faa_candidates:
+    #         self.parser.run_prodigal()
+    #         self.output_faa = Path(faa_candidates[0])
+    #         if len(faa_candidates) > 1:
+    #             print(f"[WARNING] Multiple .faa files found in {Files.PRODIGAL}. Using: {self.output_faa.name}")
+    #         else:
+    #             print(f"[INFO] Using existing Prodigal .faa: {self.output_faa.name}")
+            
+    #     else:
+    #         print("[INFO] No .faa file found. Calling Prodigal...")
+    #         self.output_faa = self.parser.run_prodigal()
+
+    #     self.ncbi = self.parser.parse_fasta_to_dataframe(return_df=True)
+    #     self.df_prots = None
+    #     self.df_virus_prot = None
+
+    def __init__(self, parser: FastaParser, output_dir: Optional[Path] = None):
         """
         Wraps a FastaParser instance and processes predicted protein sequences from Prodigal output.
-        Will run Prodigal only if no .faa file is found in the expected directory.
+        Delegates to FastaParser.run_prodigal(), which is idempotent:
+        - If .faa/.gff already exist in output_dir, reuses them.
+        - Otherwise, runs Prodigal and returns the new paths.
         """
         self.parser = parser
-        faa_candidates = sorted(glob.glob(str(Files.PRODIGAL / "*.faa")))
+        # Si no te pasan carpeta, usa la de Files (modo entrenamiento).
+        target_dir = output_dir if output_dir is not None else Files.PRODIGAL
+        print(target_dir)
+        self.output_faa = self.parser.run_prodigal(output_dir=target_dir)
 
-        if faa_candidates:
-            self.parser.run_prodigal()
-            self.output_faa = Path(faa_candidates[0])
-            if len(faa_candidates) > 1:
-                print(f"[WARNING] Multiple .faa files found in {Files.PRODIGAL}. Using: {self.output_faa.name}")
-            else:
-                print(f"[INFO] Using existing Prodigal .faa: {self.output_faa.name}")
-            
-        else:
-            print("[INFO] No .faa file found. Running Prodigal...")
-            self.output_faa = self.parser.run_prodigal()
-
+        # FASTA metadata (contigs) para poder hacer merges más tarde
         self.ncbi = self.parser.parse_fasta_to_dataframe(return_df=True)
+
+        # Placeholders
         self.df_prots = None
         self.df_virus_prot = None
-
-
     
     def parse_prodigal(self):
         """

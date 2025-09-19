@@ -53,3 +53,18 @@ chatgpt.txt
 
 # Do not track validation/test experiments
 /tests/
+
+# model_data
+/models/complete_markers
+/models/nested_model
+/models/viral_markers
+
+# runs (trials of user behaviour)
+/runs/
+
+# tool_data -> Data and trained models (users must download it)
+/tool_data/
+
+# dimiss scripts
+/scripts/run_hmmscan_parallel2.sh
+/scripts/run_hmm_scan.sh

@@ -30,10 +30,10 @@ class Files:
 
     # HMM Models (genomad hmm models)
 
-    HMM_MODELS = DATA_DIR / "vpf_models/profiles.hmms"
-    #HMM_MODELS = DATA_DIR / "vpf_models/profiles_virus.hmms"
-    HMM_DICT = DATA_DIR / "vpf_models/vpf_to_index.json"
-    #HMM_DICT = DATA_DIR / "vpf_models/vpf_to_index_V.json"
+    #HMM_MODELS = DATA_DIR / "vpf_models/profiles.hmms"
+    HMM_MODELS = DATA_DIR / "vpf_models/profiles_virus.hmms"
+    #HMM_DICT = DATA_DIR / "vpf_models/vpf_to_index.json"
+    HMM_DICT = DATA_DIR / "vpf_models/vpf_to_index_V.json"
 
 
     # HMM outputs

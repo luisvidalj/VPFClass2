@@ -20,11 +20,11 @@ def run_pipeline(e_value_threshold=1e-3, num_cpus=12):
     fasta_parser.parse_fasta_to_dataframe()
 
     print("[STEP 2] Running Prodigal (or reusing previous output)...")
-    prodigal = Prodigal(parser=fasta_parser)
+    prodigal = Prodigal(parser=fasta_parser,output_dir=Files.PRODIGAL)
     df_proteins = prodigal.parse_prodigal()
 
     print("[STEP 3] Running HMMER (if needed) and parsing .tbl hits...")
-    vpf = VPF_parser(parser=fasta_parser, e_value_threshold=e_value_threshold, num_cpus=num_cpus)
+    vpf = VPF_parser(parser=fasta_parser,hmm_file=Files.HMM_MODELS ,e_value_threshold=e_value_threshold, num_cpus=num_cpus)
     vpf.parse_multiple_hmm()
 
     print(f"[STEP 4] Merging VPF hits with taxonomic metadata from ICTV ({Files.ICTV_RELEASE})")

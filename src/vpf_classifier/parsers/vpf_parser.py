@@ -8,35 +8,72 @@ from typing import Optional
 import glob
 import os
 import json
+from pathlib import Path
+from typing import Optional
 
 from vpf_classifier.utils.config import Files
 from vpf_classifier.utils.config import Constants
 from vpf_classifier.parsers.fasta_parser import FastaParser
 
 class VPF_parser:
-    def __init__(self, parser: FastaParser, hmm_file=Files.HMM_MODELS, e_value_threshold: Optional[float] = Constants.e_value_threshold, num_cpus = 20):
+    # def __init__(self, parser: FastaParser, hmm_file=Files.HMM_MODELS, e_value_threshold: Optional[float] = Constants.e_value_threshold, num_cpus = 20):
+    #     self.parser = parser
+    #     self.evalue = e_value_threshold
+    #     self.df_hmm = None
+    #     self.df_virus_hmm = None
+
+    #     # Check for existing HMMER .tbl files
+    #     output_tbls = glob.glob(str(Files.HMM_OUTPUT_MULTIPLE / "*.tbl"))
+    #     if output_tbls:
+    #         print(f"[INFO] Existing HMMER output found: {len(output_tbls)} .tbl files")
+    #     else:
+    #         print("[INFO] No HMMER output found. Running hmmsearch assuming 12 CPUs for parallelization")
+    #         self.parser.run_hmmer(hmm_models=hmm_file, output_dir=Files.HMM_OUTPUT_MULTIPLE,num_cpus=num_cpus)
+
+    def __init__(
+        self,
+        parser: FastaParser,
+        hmm_file = Files.HMM_MODELS,
+        e_value_threshold: Optional[float] = Constants.e_value_threshold,
+        num_cpus: int = 20,
+        # --- NUEVO ---
+        vpf_dict_path: Optional[Path] = None,
+        hmm_output_dir: Optional[Path] = None,
+    ):
         self.parser = parser
         self.evalue = e_value_threshold
         self.df_hmm = None
         self.df_virus_hmm = None
 
-        # Check for existing HMMER .tbl files
-        output_tbls = glob.glob(str(Files.HMM_OUTPUT_MULTIPLE / "*.tbl"))
-        if output_tbls:
-            print(f"[INFO] Existing HMMER output found: {len(output_tbls)} .tbl files")
-        else:
-            print("[INFO] No HMMER output found. Running hmmsearch assuming 12 CPUs for parallelization")
-            self.parser.run_hmmer(hmm_models=hmm_file, output_dir=Files.HMM_OUTPUT_MULTIPLE,num_cpus=num_cpus)
+        # --- NUEVO: almacenar overrides ---
+        self._vpf_dict_path = vpf_dict_path
+        self._hmm_output_dir = Path(hmm_output_dir) if hmm_output_dir is not None else Files.HMM_OUTPUT_MULTIPLE
+
+        # Miramos si ya hay .tbl en la carpeta seleccionada; si no, ejecutamos hmmsearch ahí
+        output_tbls = glob.glob(str(self._hmm_output_dir / "*.tbl"))
+        if not output_tbls:
+            os.makedirs(self._hmm_output_dir, exist_ok=True)
+            print(f"[INFO] No HMMER output found. Running hmmsearch -> {self._hmm_output_dir} (cpus={num_cpus})")
+            self.parser.run_hmmer(
+                hmm_models=hmm_file,
+                output_dir=self._hmm_output_dir,
+                num_cpus=num_cpus
+            )
 
 
+    # def parse_multiple_hmm(self, unique_hit=False, hmm_output_folder: Optional[str] = Files.HMM_OUTPUT_MULTIPLE):
+    #     attribs = ['id', 'bitscore', 'cluster_num', 'evalue']
+    #     hits = {key: [] for key in ['hmm_name'] + attribs} 
 
-
-    def parse_multiple_hmm(self, unique_hit=False, hmm_output_folder: Optional[str] = Files.HMM_OUTPUT_MULTIPLE):
+    #     print(f"[INFO] Parsing HMMER .tbl files from {Files.HMM_OUTPUT_MULTIPLE}...")
+    #     output_files = glob.glob(os.path.join(hmm_output_folder, "*.tbl"))
+    def parse_multiple_hmm(self, unique_hit: bool = False, hmm_output_folder: Optional[str] = None):
         attribs = ['id', 'bitscore', 'cluster_num', 'evalue']
-        hits = {key: [] for key in ['hmm_name'] + attribs} 
+        hits = {key: [] for key in ['hmm_name'] + attribs}
 
-        print(f"[INFO] Parsing HMMER .tbl files from {Files.HMM_OUTPUT_MULTIPLE}...")
-        output_files = glob.glob(os.path.join(hmm_output_folder, "*.tbl"))
+        folder = Path(hmm_output_folder) if hmm_output_folder else self._hmm_output_dir
+        print(f"[INFO] Parsing HMMER .tbl files from {folder}...")
+        output_files = glob.glob(str(folder / "*.tbl"))
 
         for file in output_files:
             with open(file) as handle:
@@ -106,7 +143,8 @@ class VPF_parser:
         Uses a precomputed vpf_to_index dictionary to ensure all vectors have the same length.
         Builds a fixed-length sparse matrix of VPF counts.
         """
-        dict_path = Files.HMM_DICT
+        # dict_path = Files.HMM_DICT
+        dict_path = Path(self._vpf_dict_path) if self._vpf_dict_path else Files.HMM_DICT
         if not dict_path.exists():
             raise FileNotFoundError(f"[ERROR] Expected dictionary not found at {dict_path}")
 

@@ -65,4 +65,3 @@ MINUTES=$(((DURATION % 3600) / 60))
 SECONDS=$((DURATION % 60))
 
 printf "[INFO] Tiempo total: %02d:%02d:%02d (hh:mm:ss)\n" $HOURS $MINUTES $SECONDS
-

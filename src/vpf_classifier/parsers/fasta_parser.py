@@ -8,14 +8,19 @@ import glob
 from vpf_classifier.utils.config import Files
 from vpf_classifier.utils.config import SCRIPTS_DIR
 from vpf_classifier.utils.config import DATA_DIR
+from typing import Optional
 import subprocess
 
 
 class FastaParser:
-    def __init__(self, fna_path = Files.FASTA):
-        self.fna_path = fna_path
+    def __init__(self, fna_path: Optional[Path] = None):
+        if fna_path is not None:
+            self.fna_path = fna_path
+        else:
+            print("ME CAGO EN MI SANTA VIDA")
+            self.fna_path = Files.FASTA
         self.faa = None
-        self. ncbi_df = None
+        self.ncbi_df = None
 
     def parse_fasta_to_dataframe(self, return_df=True) -> pd.DataFrame:
         records = list(SeqIO.parse(self.fna_path, "fasta"))
@@ -49,20 +54,27 @@ class FastaParser:
         - Path to the .faa file with predicted proteins.
         """
         os.makedirs(output_dir, exist_ok=True)
+        
+        outdir = Path(output_dir)
 
-        faa_out = output_dir / Files.FAA
-        gff_out = output_dir / Files.GFF
+        # Busca archivos que terminen en .faa
+        faa_files = list(outdir.glob("*.faa"))
 
-        if faa_out.exists() and gff_out.exists():
+        # Si hay al menos uno, coge el primero
+        faa_out = faa_files[0] if faa_files else None
+        
+        # gff_out = output_dir / Files.GFF
+
+        if faa_out: #and gff_out.exists():
             print(f"[INFO] Prodigal output already found at {output_dir}")
             self.faa = faa_out
         else:
+            faa_out = Path(output_dir) / "output.faa"
             print("[INFO] Running Prodigal in metagenomic mode...")
             cmd = [
                 "prodigal",
                 "-i", str(self.fna_path),
                 "-a", str(faa_out),
-                "-o", str(gff_out),
                 "-p", "meta",  # Metagenomic mode
                 "-q"           # Quiet mode (suppress output)
             ]
@@ -87,11 +99,11 @@ class FastaParser:
         """
         if self.faa is None:
             print(self.faa)
-            raise RuntimeError("Protein file (.faa) is missing. Run prodigal first.")
+            raise RuntimeError("Protein file (.faa) is missing.")
          
-        script_path = SCRIPTS_DIR / "run_hmm_parallel.sh"
-        print(f'Busco en {script_path}')
-        print(f'ROOT: {DATA_DIR}')
+        script_path = SCRIPTS_DIR / "run_hmm_parallel2.sh"
+        # print(f'Busco en {script_path}')
+        # print(f'ROOT: {DATA_DIR}')
         if not script_path.exists():
             raise FileNotFoundError(f"HMMER execution script not found at {script_path}")
          
