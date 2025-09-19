@@ -31,6 +31,12 @@ docs/
 *.ckpt
 *.log
 
+# Packaging / builds
+build/
+dist/
+*.egg-info/
+src/vpf_classifier.egg-info/
+
 # Output files from bioinformatics tools
 *.tbl
 *.faa
