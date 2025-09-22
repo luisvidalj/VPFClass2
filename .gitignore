@@ -75,4 +75,8 @@ chatgpt.txt
 /scripts/run_hmmscan_parallel2.sh
 /scripts/run_hmm_scan.sh
 
+# not used code
 /src/vpf_classifier/pipelines/inference_pipeline.py
+
+# tool_data (download by user)
+tool_data_v0.4.0.tar.zst

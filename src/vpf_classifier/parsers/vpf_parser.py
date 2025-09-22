@@ -59,6 +59,8 @@ class VPF_parser:
                 output_dir=self._hmm_output_dir,
                 num_cpus=num_cpus
             )
+        else:
+            print(f"[INFO] HMMER ouput already found.")
 
 
     # def parse_multiple_hmm(self, unique_hit=False, hmm_output_folder: Optional[str] = Files.HMM_OUTPUT_MULTIPLE):
@@ -95,7 +97,7 @@ class VPF_parser:
         self._merge_taxonomy()
         # self._add_vpf_counts_sparse_optimized()
         self._add_vpf_counts_sparse_fixed()
-        print("[INFO] Aggregated VPF hit matrix available at .df_virus_hmm")
+        # print("[INFO] Aggregated VPF hit matrix available at .df_virus_hmm")
 
 
     def _aggregate_by_virus(self):

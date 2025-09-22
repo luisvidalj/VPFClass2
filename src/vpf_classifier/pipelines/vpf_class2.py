@@ -156,7 +156,6 @@ def _ensure_sparse_genus_on_path(model_dir_p: Path) -> None:
     Inserta '.../models' en sys.path si existe '.../models/sparse_genus',
     para que 'import sparse_genus' funcione al hacer torch.load(model).
     """
-    print("HOLA")
     try:
         # Caso típico: model_dir_p = repo/models/complete_markers/MSL40
         models_root = model_dir_p.parents[3]
@@ -165,7 +164,7 @@ def _ensure_sparse_genus_on_path(model_dir_p: Path) -> None:
             path_str = str(models_root.resolve())
             if path_str not in sys.path:
                 sys.path.insert(0, path_str)
-                print(f"[DEBUG] Added to sys.path: {path_str}")
+                # print(f"[DEBUG] Added to sys.path: {path_str}")
     except Exception:
         # Fallback: buscar subiendo desde CWD
         cwd = Path.cwd()
@@ -175,7 +174,7 @@ def _ensure_sparse_genus_on_path(model_dir_p: Path) -> None:
                 path_str = str((r / "models").resolve())
                 if path_str not in sys.path:
                     sys.path.insert(0, path_str)
-                    print(f"[DEBUG] Added to sys.path: {path_str}")
+                    # print(f"[DEBUG] Added to sys.path: {path_str}")
                 break
 
 
@@ -234,7 +233,7 @@ def run_user_pipeline(
     prodigal_path = shutil.which("prodigal")      # <- corregido (antes 'prodigal-g')
     hmmsearch_path = shutil.which("hmmsearch")
 
-    print("[PIPELINE] ========= RUNTIME SETUP =========")
+    print("=========================== RUNTIME SETUP ===========================")
     print(f"[PIPELINE] FASTA:        {fasta_p}")
     print(f"[PIPELINE] OUTDIR:       {outdir_p}")
     print(f"[PIPELINE] MODEL DIR:    {model_dir_p}")
@@ -244,13 +243,13 @@ def run_user_pipeline(
     print(f"[PIPELINE] device:       {device}")
     print(f"[PIPELINE] prodigal:     {prodigal_path or 'NOT FOUND'}")
     print(f"[PIPELINE] hmmsearch:    {hmmsearch_path or 'NOT FOUND'}")
-    print(f"[PIPELINE] subdirs:")
+    print(f"[PIPELINE] Generating subdirs:")
     print(f"    - fasta:     {run_dirs.fasta}")
     print(f"    - prodigal:  {run_dirs.prodigal}")
     print(f"    - hmmer:     {run_dirs.hmmer}")
     print(f"    - features:  {run_dirs.features}")
     print(f"    - preds:     {run_dirs.preds}")
-    print("[PIPELINE] =================================")
+    print("=====================================================================")
 
     if prodigal_path is None:
         raise EnvironmentError("Prodigal not found. Make sure the conda environment is activated.")
@@ -279,8 +278,9 @@ def run_user_pipeline(
     }
     (outdir_p / "run_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
+    print("--------------------------------------------------------------------")
     # ========= Fasta -> DataFrame ===========================================
-    print("[PIPELINE] 1/5 - Parsing FASTA...", print(fasta_p))
+    print("[PIPELINE] 1/5 - Parsing FASTA...")
     fasta_parser = FastaParser(fna_path=str(fasta_p))
     fasta_parser.parse_fasta_to_dataframe()
 
@@ -298,6 +298,7 @@ def run_user_pipeline(
     (outdir_p / "run_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
     # ======== Prodigal =========================================================
+    print("--------------------------------------------------------------------")
     # (si en algún momento ofreces opción de cargar .faa directamente, aquí haríamos el bypass)
     print("[PIPELINE] 2/5 - Prodigal (reusing if .faa is found)...")
     fasta_parser.run_prodigal(output_dir=str(run_dirs.prodigal))
@@ -325,29 +326,30 @@ def run_user_pipeline(
     (outdir_p / "run_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
     # ========= Hmmsearch (Bloque 4) ==========================================
-    print(f"[PIPELINE] 3/5 - HMMER + parse (e≤{e_value_threshold})…")
-    # Aquí aún no ejecutamos; en el siguiente bloque llamaremos a VPF_parser
-    # con out_dir=str(run_dirs.hmmer) para que TODO quede bajo outdir/hmmer/.
+    # print(f"[PIPELINE] 3/5 - HMMER + parse (e≤{e_value_threshold})…")
+    # # Aquí aún no ejecutamos; en el siguiente bloque llamaremos a VPF_parser
+    # # con out_dir=str(run_dirs.hmmer) para que TODO quede bajo outdir/hmmer/.
 
-    vpf = VPF_parser(
-        parser=fasta_parser,
-        e_value_threshold=float(e_value_threshold),
-        num_cpus=int(num_cpus),
-        hmm_output_dir=str(run_dirs.hmmer),
-    )
+    # vpf = VPF_parser(
+    #     parser=fasta_parser,
+    #     e_value_threshold=float(e_value_threshold),
+    #     num_cpus=int(num_cpus),
+    #     hmm_output_dir=str(run_dirs.hmmer),
+    # )
     
-    try:
-        vpf._vpf_dict_path = str(vpf_dict_p)
-    except:
-        pass
+    # try:
+    #     vpf._vpf_dict_path = str(vpf_dict_p)
+    # except:
+    #     pass
 
-    vpf.parse_multiple_hmm()
+    # vpf.parse_multiple_hmm()
 
 
  
 
 
     # ========= HMMER (Bloque 4) ==========================================
+    print("--------------------------------------------------------------------")
     print(f"[PIPELINE] 3/5 - HMMER + parse (e≤{e_value_threshold})…")
 
     if hmm_models is None:
@@ -408,8 +410,10 @@ def run_user_pipeline(
     (outdir_p / "run_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
 
-    # ========= 5: Features Building (VPF counts aggregated by Virus) =======
-    print("[PIPELINE] 4/5 - Construyendo features (conteos por VPF, tamaño fijo)…")
+    
+# ========= 5: Features Building (VPF counts aggregated by Virus) =======
+    print("--------------------------------------------------------------------")
+    print("[PIPELINE] 4/5 - Building features (counts per VPF)…")
 
     # 1) Matriz dispersa CSR fija construida por VPF_parser
     sparse_mat = vpf.get_sparse_matrix_from_dataframe()  # csr_matrix
@@ -451,9 +455,9 @@ def run_user_pipeline(
     }
     (run_dirs.features / "features_stats.json").write_text(json.dumps(features_stats, indent=2), encoding="utf-8")
 
-    print(f"[PIPELINE] Features (sparse CSR) guardadas en: {features_npz_path}")
-    print(f"[PIPELINE] Orden de Accessions: {accessions_path}")
-    print(f"[PIPELINE] VPF map usado:       {vpf_map_path}")
+    print(f"[PIPELINE] Features (sparse CSR) saved: {features_npz_path}")
+    print(f"[PIPELINE] Virus Accessions: {accessions_path}")
+    print(f"[PIPELINE] VPF map: {vpf_map_path}")
     print(f"[PIPELINE] Stats: {features_stats}")
 
     # 4) Meta
@@ -468,6 +472,7 @@ def run_user_pipeline(
 
 
     # =============== 6: Model + Inference ========================================================
+    print("--------------------------------------------------------------------")
     print("[PIPELINE] 5/5 - Loading model and generating predictions...")
 
     # 1) features (CSR), accessions and labels
@@ -538,12 +543,9 @@ def run_user_pipeline(
 
     _ensure_sparse_genus_on_path(model_dir_p=model_dir_p)
     try:
-        print("CARGO EL MODELO")
         # Cargamos SIEMPRE el objeto completo; evita el FutureWarning al fijar weights_only=False
         model = torch.load(model_path, map_location=device, weights_only=False)
-        print("CARGO EL MODELO 2")
     except TypeError:
-        print("CARGO EL MODELO 3")
         # Para compatibilidad con PyTorch<2.5 que no tiene weights_only
         model = torch.load(model_path, map_location=device)
 
@@ -561,7 +563,7 @@ def run_user_pipeline(
     if fc1 is not None and hasattr(fc1, "in_features"):
         if int(fc1.in_features) != in_features:
             print(f"[WARN] Model in_features={int(fc1.in_features)} but features have {in_features}. "
-                  "Si no coincide, revisa que vpf_to_index y el modelo correspondan a la misma versión.")
+                  "If it does not match, check that vpf_to_index and the model correspond to the same version..")
 
 
 
@@ -598,7 +600,6 @@ def run_user_pipeline(
 
     # 4) Store preds in a CSV
     preds_df = pd.DataFrame(records)
-    print(preds_df.head())
     preds_df.insert(0,"Accession", accessions)
     preds_csv = run_dirs.preds / "prediction.csv"
     _save_csv(df=preds_df, path=preds_csv)

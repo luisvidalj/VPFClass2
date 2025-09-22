@@ -64,11 +64,9 @@ def resolve_from_markers(tool_data_root: Path, markers: str, msl: str):
     """
     base = {"all": "complete_markers", "virus": "virus_markers"}[markers]
     root = tool_data_root / base
-    print("BUSCO EN: ", root)
     model_dir  = root / "models" / f"MSL{msl}"
-    print("MODELOS EN: ", model_dir)
     vpf_dir    = _vpf_dir_for(root)
-    print("VPF DIR: ", vpf_dir)
+
 
     json_files = list(vpf_dir.glob("*.json"))
     hmms_files = list(vpf_dir.glob("*.hmms"))
