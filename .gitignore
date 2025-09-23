@@ -41,7 +41,7 @@ src/vpf_classifier.egg-info/
 *.tbl
 *.faa
 *.gff
-*.fna
+
 *.out
 *.csv
 *.tsv
