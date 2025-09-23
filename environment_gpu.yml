@@ -1,0 +1,39 @@
+name: vpfclass-gpu
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+
+  # Core scientific
+  - numpy
+  - pandas
+  - scikit-learn
+  - scipy
+
+  # Bio
+  - biopython
+  - hmmer
+  - prodigal-gv
+  - mmseqs2
+
+  # Torch + CUDA (elige versión CUDA acorde al driver)
+  - pytorch=2.5.*
+  - torchvision=0.20.*
+  - torchaudio=2.5.*
+  - pytorch-cuda=12.4  # requiere driver >= 550.x
+
+  # Utils / notebooks / plots
+  - ipykernel
+  - matplotlib
+  - seaborn
+  - tqdm
+  - networkx
+
+  - pip:
+      - pyhmmer
+      - rich

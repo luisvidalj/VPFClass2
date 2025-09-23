@@ -1,0 +1,43 @@
+name: vpfclass
+channels:
+  - conda-forge
+  - bioconda
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+
+  # Core scientific
+  - numpy
+  - pandas
+  - scikit-learn
+  - scipy
+
+  # Bio
+  - biopython
+  - hmmer
+  - prodigal-gv
+  - mmseqs2
+
+  # Torch (CPU en Mac / Linux sin GPU)
+  - pytorch=2.5.*
+  - torchvision=0.20.*
+  - torchaudio=2.5.*
+
+  # Utils / notebooks / plots
+  - ipykernel
+  - matplotlib
+  - seaborn
+  - tqdm
+  - networkx
+
+  # (Opcional) Qt si usas backends interactivos
+  # - pyqt
+
+  - pip:
+      # Si los usas:
+      - pyhmmer
+      - rich
+      # No instales aquí tu propio paquete; mejor:
+      #   pip install -e .
