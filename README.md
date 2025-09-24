@@ -73,7 +73,7 @@ Where
 ### Run predictions
 
 ```bash
-vpfclass2 predict --fasta test/mini_test.fna --outdir test/output_test --markers virus --msl 39
+vpfclass2 predict --fasta test/mini_test.fna --outdir toy_example/output_test --markers virus --msl 39
 ``` 
 
 Where the arguments:
