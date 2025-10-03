@@ -48,7 +48,7 @@ class Prodigal:
         self.parser = parser
         # Si no te pasan carpeta, usa la de Files (modo entrenamiento).
         target_dir = output_dir if output_dir is not None else Files.PRODIGAL
-        print(target_dir)
+
         self.output_faa = self.parser.run_prodigal(output_dir=target_dir)
 
         # FASTA metadata (contigs) para poder hacer merges más tarde

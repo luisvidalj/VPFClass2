@@ -37,12 +37,6 @@ def _load_idx_to_label(path: Path) -> list[str]:
     return [lab for _,lab in sorted(data.items(), key=lambda kv: int(kv[0]))]
 
 
-def _get_model_in_features(model:torch.nn.Module) -> int | None:
-    # Esta funcion tiene que devolver un entero con el numero de features que tiene la red
-    # tenemos que decidiri si queremos que sean los modelos completos o los reducidos. Valorar tiempo
-    # de ejecucion en funcion de los recursos disponibles.
-    return ""
-
 
 def _scipy_csr_to_torch_coo_batch(X_csr_batch: csr_matrix, device:str = "cpu") -> torch.Tensor:
     """
@@ -64,58 +58,54 @@ def _scipy_csr_to_torch_coo_batch(X_csr_batch: csr_matrix, device:str = "cpu") -
 
     return sp
 
-# def _import_sparse_nn(model_dir_p: Path):
-#     """
-#     Import SparseNN from proper paths
-#     """
-#     models_dir = model_dir_p.parent.parent
-#     sparse_pkg = models_dir / "sparse_genus"
 
-#     if sparse_pkg.exists() and str(models_dir) not in sys.path:
-#         sys.path.insert(0,str(models_dir))
-
-#     try:
-#         from sparse_genus.architecture import SparseNN
-#         return SparseNN
-#     except Exception:
-#         try:
-#             from vpf_classifier.models.sparse_genus.architecture.py import SparseNN
-#         except Exception as e:
-#             raise ImportError(
-#                 "Model not found"
-#             )
-
-
-
-
-
-def _predict_in_batches(
-        model: torch.nn.Module,
-        X_csr: csr_matrix,
-        idx_to_label: list[str],
-        device: str = "cpu",
-        batch_size: int = 1024,
-        topk: int = 3,
-) -> list[dict]:
+def _load_lineage_by_genus(model_dir_p: Path) -> dict:
     """
-    Function to infer predictions from the pre-loaded model.
+    Load tool_data/MSL_labelling/MSLXX/lineage.json
     """
-    # per com esta construit el codi no tocaria mai trobar aquest error
-    assert issparse(X_csr), "Error when calling _predict_in_batches due to not sparse X_Csr" # aixo amollara un error si no es compleix la condició
-    n = X_csr.shape[0]
-    records: list[dict] = []
-    k = min(topk, len(idx_to_label))
 
-    model.eval()
-    model.to(device)
+    # model_dir_p = tool_data/<base>/models/MSLXX
+    try:
+        msl_tag = model_dir_p.name 
+        tool_data_root = model_dir_p.parents[3] #.../tool_data
+    except Exception:
+        return {}
+    
+    lineage_path = tool_data_root / "MSL_labelling" / msl_tag / "lineage.json"
+    print(f"Just in case {tool_data_root}")
+    if lineage_path.exists():
+        return json.loads(lineage_path.read_text(encoding="utf-8"))
+    return {}
 
-    with torch.no_grad():
-        for start in range(0,n, batch_size):
-            end = min(start + batch_size, n)
+
+
+# def _predict_in_batches(
+#         model: torch.nn.Module,
+#         X_csr: csr_matrix,
+#         idx_to_label: list[str],
+#         device: str = "cpu",
+#         batch_size: int = 1024,
+#         topk: int = 3,
+# ) -> list[dict]:
+#     """
+#     Function to infer predictions from the pre-loaded model.
+#     """
+#     # per com esta construit el codi no tocaria mai trobar aquest error
+#     assert issparse(X_csr), "Error when calling _predict_in_batches due to not sparse X_Csr" # aixo amollara un error si no es compleix la condició
+#     n = X_csr.shape[0]
+#     records: list[dict] = []
+#     k = min(topk, len(idx_to_label))
+
+#     model.eval()
+#     model.to(device)
+
+#     with torch.no_grad():
+#         for start in range(0,n, batch_size):
+#             end = min(start + batch_size, n)
 
 
 
-## Meter a partir de predict_ in batches
+# ## Meter a partir de predict_ in batches
 
 
 
@@ -137,12 +127,12 @@ def _make_run_dirs(outdir_p: Path) -> RunDirs:
         root = outdir_p,
         logs = outdir_p / "logs",
         fasta = outdir_p / "fasta",
-        prodigal = outdir_p / "prodigal",
-        hmmer = outdir_p / "hmmer",
+        prodigal = outdir_p / "1_prodigal",
+        hmmer = outdir_p / "2_hmmer",
         features = outdir_p / "features",
-        preds=outdir_p / "preds"
+        preds=outdir_p / "0_preds"
     )
-    for d in (rd.logs, rd.fasta, rd.prodigal, rd.hmmer, rd.features, rd.preds):
+    for d in (rd.prodigal, rd.hmmer, rd.features, rd.preds):
         d.mkdir(parents=True, exist_ok=True)
 
     return rd
@@ -150,6 +140,7 @@ def _make_run_dirs(outdir_p: Path) -> RunDirs:
 
 import sys
 from pathlib import Path
+from typing import Optional
 
 def _ensure_sparse_genus_on_path(model_dir_p: Path) -> None:
     """
@@ -164,7 +155,7 @@ def _ensure_sparse_genus_on_path(model_dir_p: Path) -> None:
             path_str = str(models_root.resolve())
             if path_str not in sys.path:
                 sys.path.insert(0, path_str)
-                # print(f"[DEBUG] Added to sys.path: {path_str}")
+                print(f"[DEBUG] Added to sys.path: {path_str}")
     except Exception:
         # Fallback: buscar subiendo desde CWD
         cwd = Path.cwd()
@@ -177,6 +168,41 @@ def _ensure_sparse_genus_on_path(model_dir_p: Path) -> None:
                     # print(f"[DEBUG] Added to sys.path: {path_str}")
                 break
 
+
+from vpf_classifier.utils.config import ROOT_DIR
+import sys
+
+_MODELS_CODE_ADDED = False
+
+def _ensure_models_code_on_path_once() -> None:
+    """
+    Insert '<repo>/models' into sys.path to see sparse_genus and sparse_family modules
+    """
+
+    global _MODELS_CODE_ADDED
+
+    if _MODELS_CODE_ADDED:
+        return
+    
+    models_dir = (ROOT_DIR / "models").resolve()
+    path_str = str(models_dir)
+
+    if models_dir.exists() and path_str not in sys.path:
+        sys.path.insert(0,path_str) # insert es como append pero donde quieras. Igual funcionaria con append
+    _MODELS_CODE_ADDED = True
+
+
+def _ensure_sparse_task_on_path(model_dir_p: Path, module_dir_names: str) -> None:
+
+
+    def _add_models_path(models_dir: Path) -> None:
+        path_str = str(models_dir.resolve())
+        if path_str not in sys.path:
+            sys.path.insert(0, path_str)
+
+    def _find_models_root_upwards(start:Path) -> Optional[Path]:
+        
+        pass
 
 
 
@@ -200,9 +226,9 @@ def run_user_pipeline(
     if fasta is None:
         raise ValueError("You must provide --fasta")
     if model_dir is None:
-        raise ValueError("You must provide --model-dir")
+        raise ValueError("Models directory not found")
     if vpf_dict is None:
-        raise ValueError("You must provide --vpf-dict")
+        raise ValueError("Tool_data information not found")
 
     fasta_p = Path(fasta).expanduser().resolve()
     model_dir_p = Path(model_dir).expanduser().resolve()
@@ -216,35 +242,34 @@ def run_user_pipeline(
 
     # subcarpetas por run
     run_dirs = _make_run_dirs(outdir_p)
+    print(f"MODEL DIR: {model_dir_p}")
 
     # 2) Existence checks
     if not fasta_p.exists():
         raise FileNotFoundError(f"FASTA not found: {fasta_p}")
     if not model_dir_p.exists():
         raise FileNotFoundError(f"Model bundle dir not found: {model_dir_p}")
-    if not (model_dir_p / "model.pt").exists():
-        raise FileNotFoundError(f"Missing model.pt in {model_dir_p}")
-    if not (model_dir_p / "idx_to_label.json").exists():
-        raise FileNotFoundError(f"Missing idx_to_label.json in {model_dir_p}")
+    if not (model_dir_p).exists():
+        raise FileNotFoundError(f"Missing model directories in {model_dir_p}")
     if not vpf_dict_p.exists():
         raise FileNotFoundError(f"vpf_to_index JSON not found: {vpf_dict_p}")
 
     # 3) Required Software
-    prodigal_path = shutil.which("prodigal")      # <- corregido (antes 'prodigal-g')
+    prodigal_path = shutil.which("prodigal-gv")   
     hmmsearch_path = shutil.which("hmmsearch")
 
     print("=========================== RUNTIME SETUP ===========================")
-    print(f"[PIPELINE] FASTA:        {fasta_p}")
-    print(f"[PIPELINE] OUTDIR:       {outdir_p}")
-    print(f"[PIPELINE] MODEL DIR:    {model_dir_p}")
-    print(f"[PIPELINE] VPF DICT:     {vpf_dict_p}")
-    print(f"[PIPELINE] e-value thr.: {e_value_threshold}")
-    print(f"[PIPELINE] num_cpus:     {num_cpus}")
-    print(f"[PIPELINE] device:       {device}")
-    print(f"[PIPELINE] prodigal:     {prodigal_path or 'NOT FOUND'}")
-    print(f"[PIPELINE] hmmsearch:    {hmmsearch_path or 'NOT FOUND'}")
-    print(f"[PIPELINE] Generating subdirs:")
-    print(f"    - fasta:     {run_dirs.fasta}")
+    print(f"[SETUP] FASTA:        {fasta_p}")
+    print(f"[SETUP] OUTDIR:       {outdir_p}")
+    print(f"[SETUP] MODEL DIR:    {model_dir_p}")
+    print(f"[SETUP] VPF DICT:     {vpf_dict_p}")
+    print(f"[SETUP] e-value thr.: {e_value_threshold}")
+    print(f"[SETUP] num_cpus:     {num_cpus}")
+    print(f"[SETUP] device:       {device}")
+    print(f"[SETUP] prodigal-gv:     {prodigal_path or 'NOT FOUND'}")
+    print(f"[SETUP] hmmsearch:    {hmmsearch_path or 'NOT FOUND'}")
+    print(f"[SETUP] Generating subdirs:")
+    #print(f"    - fasta:     {run_dirs.fasta}")
     print(f"    - prodigal:  {run_dirs.prodigal}")
     print(f"    - hmmer:     {run_dirs.hmmer}")
     print(f"    - features:  {run_dirs.features}")
@@ -268,12 +293,12 @@ def run_user_pipeline(
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "stage": "setup_done",
         "run_dirs": {
-            "fasta": str(run_dirs.fasta),
+            #"fasta": str(run_dirs.fasta),
             "prodigal": str(run_dirs.prodigal),
             "hmmer": str(run_dirs.hmmer),
             "features": str(run_dirs.features),
             "preds": str(run_dirs.preds),
-            "logs": str(run_dirs.logs),
+            # "logs": str(run_dirs.logs),
         },
     }
     (outdir_p / "run_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
@@ -285,30 +310,30 @@ def run_user_pipeline(
     fasta_parser.parse_fasta_to_dataframe()
 
     # Guardar cabeceras en subcarpeta FASTA
-    headers_csv = run_dirs.fasta / "fasta_headers.csv"
-    _save_csv(fasta_parser.ncbi_df, headers_csv)
-    print(f"[PIPELINE] FASTA parsed. Headers saved in: {headers_csv}")
+    # headers_csv = run_dirs.fasta / "fasta_headers.csv"
+    # _save_csv(fasta_parser.ncbi_df, headers_csv)
+    # print(f"[PIPELINE] FASTA parsed. Headers saved in: {headers_csv}")
 
     # Update metadata
     meta.update({
         "stage": "fasta_parsed",
         "n_sequences": int(len(getattr(fasta_parser, "ncbi_df", []))),
-        "fasta_headers_csv": str(headers_csv),
+        #"fasta_headers_csv": str(headers_csv),
     })
     (outdir_p / "run_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
     # ======== Prodigal =========================================================
     print("--------------------------------------------------------------------")
-    # (si en algún momento ofreces opción de cargar .faa directamente, aquí haríamos el bypass)
-    print("[PIPELINE] 2/5 - Prodigal (reusing if .faa is found)...")
-    fasta_parser.run_prodigal(output_dir=str(run_dirs.prodigal))
+    # (si en algún momento ofrecemos opción de cargar .faa directamente, aquí haríamos el bypass)
+    print("[PIPELINE] 2/5 - Prodigal...")
+    #fasta_parser.run_prodigal(output_dir=str(run_dirs.prodigal))
     prodigal = Prodigal(parser=fasta_parser, output_dir=str(run_dirs.prodigal))  # <- ahora en subcarpeta
     df_proteins = prodigal.parse_prodigal()
 
     # Guardar resumen de proteínas en subcarpeta PROTEINS
-    proteins_csv = run_dirs.prodigal / "prodigal_proteins.csv"
-    _save_csv(df_proteins, proteins_csv)
-    print(f"[PIPELINE] Prodigal completed. Summary of viral proteins: {proteins_csv}")
+    # proteins_csv = run_dirs.prodigal / "prodigal_proteins.csv"
+    # _save_csv(df_proteins, proteins_csv)
+    # print(f"[PIPELINE] Prodigal completed. Summary of viral proteins: {proteins_csv}")
 
     # Registrar salidas presentes (si no existen, listas vacías)
     prodigal_files = {
@@ -321,36 +346,14 @@ def run_user_pipeline(
         "stage": "prodigal_done",
         "n_proteins": int(len(df_proteins)),
         "prodigal_outputs": prodigal_files,
-        "prodigal_proteins_csv": str(proteins_csv),
+        #"prodigal_proteins_csv": str(proteins_csv),
     })
     (outdir_p / "run_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
-
-    # ========= Hmmsearch (Bloque 4) ==========================================
-    # print(f"[PIPELINE] 3/5 - HMMER + parse (e≤{e_value_threshold})…")
-    # # Aquí aún no ejecutamos; en el siguiente bloque llamaremos a VPF_parser
-    # # con out_dir=str(run_dirs.hmmer) para que TODO quede bajo outdir/hmmer/.
-
-    # vpf = VPF_parser(
-    #     parser=fasta_parser,
-    #     e_value_threshold=float(e_value_threshold),
-    #     num_cpus=int(num_cpus),
-    #     hmm_output_dir=str(run_dirs.hmmer),
-    # )
-    
-    # try:
-    #     vpf._vpf_dict_path = str(vpf_dict_p)
-    # except:
-    #     pass
-
-    # vpf.parse_multiple_hmm()
-
-
- 
 
 
     # ========= HMMER (Bloque 4) ==========================================
     print("--------------------------------------------------------------------")
-    print(f"[PIPELINE] 3/5 - HMMER + parse (e≤{e_value_threshold})…")
+    print(f"[PIPELINE] 3/5 - HMMER + filtering (e_value ≤ {e_value_threshold})…")
 
     if hmm_models is None:
         raise ValueError("You must either provide hmm_models or ensure that it is in the default path.")
@@ -384,9 +387,9 @@ def run_user_pipeline(
 
 
     # Guardamos los hits por virus 
-    hits_csv = run_dirs.hmmer / "hmm_hits.csv"
-    vpf.df_virus_hmm.to_csv(hits_csv, index=False)
-    print(f"[PIPELINE] HMMER completed. Hits per virus saved in: {hits_csv}")
+    # hits_csv = run_dirs.hmmer / "hmm_hits.csv"
+    # vpf.df_virus_hmm.to_csv(hits_csv, index=False)
+    # print(f"[PIPELINE] HMMER completed. Hits per virus saved in: {hits_csv}")
 
     # Resumen seguro (si faltan columnas, no reventamos)
     try:
@@ -404,7 +407,7 @@ def run_user_pipeline(
         "num_cpus": int(num_cpus),
         "n_hit_pairs": n_pairs,
         "n_viruses_with_hits": n_viruses_with_hits,
-        "hmm_hits_csv": str(hits_csv),
+        #"hmm_hits_csv": str(hits_csv),
         "hmm_models": str(hmm_models_p),
     })
     (outdir_p / "run_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
@@ -445,20 +448,20 @@ def run_user_pipeline(
     n_rows, n_cols = sparse_mat.shape
     nnz = int(sparse_mat.nnz)
     nonzero_fraction = float(nnz / (n_rows * n_cols)) if (n_rows and n_cols) else 0.0
-    features_stats = {
-        "shape": [int(n_rows), int(n_cols)],
-        "nnz": nnz,
-        "nonzero_fraction": nonzero_fraction,
-        "n_sequences_for_features": int(len(accessions)),
-        "dict_size": int(len(vpf_to_index)),
-        "note": "counts per VPF (fixed length), built by VPF_parser._add_vpf_counts_sparse_fixed",
-    }
-    (run_dirs.features / "features_stats.json").write_text(json.dumps(features_stats, indent=2), encoding="utf-8")
+    # features_stats = {
+    #     "shape": [int(n_rows), int(n_cols)],
+    #     "nnz": nnz,
+    #     "nonzero_fraction": nonzero_fraction,
+    #     "n_sequences_for_features": int(len(accessions)),
+    #     "dict_size": int(len(vpf_to_index)),
+    #     "note": "counts per VPF (fixed length), built by VPF_parser._add_vpf_counts_sparse_fixed",
+    # }
+    #(run_dirs.features / "features_stats.json").write_text(json.dumps(features_stats, indent=2), encoding="utf-8")
 
-    print(f"[PIPELINE] Features (sparse CSR) saved: {features_npz_path}")
-    print(f"[PIPELINE] Virus Accessions: {accessions_path}")
-    print(f"[PIPELINE] VPF map: {vpf_map_path}")
-    print(f"[PIPELINE] Stats: {features_stats}")
+    print(f"[INFO] Features (sparse CSR) saved: {features_npz_path}")
+    # print(f"[PIPELINE] Virus Accessions: {accessions_path}")
+    # print(f"[PIPELINE] VPF map: {vpf_map_path}")
+    # print(f"[PIPELINE] Stats: {features_stats}")
 
     # 4) Meta
     meta.update({
@@ -466,19 +469,20 @@ def run_user_pipeline(
         "features_counts_sparse_npz": str(features_npz_path),
         "accessions_txt": str(accessions_path),
         "vpf_to_index_used_json": str(vpf_map_path),
-        "features_stats": features_stats,
+        #"features_stats": features_stats,
     })
     (outdir_p / "run_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
 
     # =============== 6: Model + Inference ========================================================
     print("--------------------------------------------------------------------")
-    print("[PIPELINE] 5/5 - Loading model and generating predictions...")
+    print("[PIPELINE] 5/5 - Loading model(s) and generating predictions...")
 
     # 1) features (CSR), accessions and labels
-    features_npz_path = run_dirs.features /"features_counts_sparse.npz" # aqui deberia tener guaradado lo que antes eran las filas del df
+    features_npz_path = run_dirs.features /"features_counts_sparse.npz" 
     accessions_path = run_dirs.features / "accessions.txt"
-    idx_to_label = _load_idx_to_label(path=model_dir_p)
+
+    # idx_to_label = _load_idx_to_label(path=model_dir_p)
 
     if not features_npz_path.exists():
         raise FileNotFoundError(f"Expected features at {features_npz_path}")
@@ -492,117 +496,248 @@ def run_user_pipeline(
     # la idea del codi d'abaix es recollir en una llista totes els accessions (un per linia al .txt)
     accessions = [line.strip() for line in accessions_path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
-    # # 2) Load Sparse NN and the model (full or state_dict) -> He de veure si se guarda tot o nomes els parametres
-    # if device == "cuda" and not torch.cuda.is_available():
-    #     print("[WARN] CUDA not available. Falling back to CPU.")
-    #     device == "cpu"
+    # model_path = model_dir_p / "model.pt"
+    in_features = int(X_csr.shape[1])
+    # num_genus   = int(len(idx_to_label))
 
-    # SparseNN = _import_sparse_nn(model_dir_p)
-    # model_path = model_dir_p  / "model.pt" # hem d'ajustar segons el nom que li posem
-    # obj = torch.load(model_path, map_location="cpu") # map_location per si no troba cuda (amolla warning?)
+    # 1b) Resolve task-specific model directories (genus/family) with backward-compat
+    # Should we care about majus/minus????????
+    genus_dir = (model_dir_p / "Genus")
+    family_dir = (model_dir_p / "Family")
 
-    # in_features = int(X_csr.shape[1])
-    # num_genus = int(len(idx_to_label))
+    available_tasks: list[tuple[str, Path]] = []
+    # Prefer new layout (subfolders). If not present, fall back to former (model.pt directly)
+    if (genus_dir / "model.pt").exists():
+        available_tasks.append(("genus",genus_dir))
+    elif (model_dir_p / "model.pt").exists():
+        available_tasks.append(("genus",model_dir_p)) # former: genus-only layout
 
-    # # si guardam el model sencer
-    # if isinstance(obj, torch.nn.Module):
-    #     model = obj.to(device)
-    #     model.eval()
-    # # si es state_dict (parametres)
-    # # Una manera de guardar els models es amb torch.save(model.state_dict(), path) el guardes en dics
-    # # "layer1.weight": tensores
-    # elif isinstance(obj, dict) and all(isinstance(k,str) for k in obj.keys()):
-    #     print("EL MODELO SE GUARDA COMO UN DICCIONARIO STATE, VEN A ARREGLAR ESTO")
+    if (family_dir / "model.pt").exists():
+        available_tasks.append(("family", family_dir))
 
-    #     # Cambiar esto:
-    #     model = obj.to(device)
-    #     model.eval()
+    
+    if not available_tasks:
+        raise FileNotFoundError(
+        f"No models found under {model_dir_p}. "
+        f"Expected either {model_dir_p/'model.pt'} or {genus_dir/'model.pt'} / {family_dir/'model.pt'}."
+    )
 
-    ##### por:
-    #     state = obj  # state_dict
-    #     # inferir hidden_dim desde fc1.weight (shape [hidden_dim, in_features])
-    #     if "fc1.weight" not in state:
-    #         raise RuntimeError("state_dict no contiene 'fc1.weight'; no se puede inferir hidden_dim.")
-    #     hidden_dim = int(state["fc1.weight"].shape[0])
-    #     model = SparseNN(input_size=in_features, hidden_dim=hidden_dim, num_genus=num_genus).to(device)
-    #     missing, unexpected = model.load_state_dict(state, strict=False)
-    #     if missing or unexpected:
-    #         print(f"[WARN] load_state_dict: missing={missing}, unexpected={unexpected}")
-    #     model.eval()
-    # else:
-    #     raise RuntimeError("Contenido de model.pt no reconocido (ni nn.Module ni state_dict).")
+    print(f"[INFO] Detected tasks: {', '.join(t for t,_ in available_tasks)}")
 
-    # 2) Load Sparse NN (full model object expected)
+        
+    # 2) Device check
     if device == "cuda" and not torch.cuda.is_available():
         print("[WARN] CUDA not available. Falling back to CPU.")
-        device = "cpu"  # asignación (antes había comparación)
+        device = "cpu" 
+    
+    batch_size = 100
 
-    model_path = model_dir_p / "model.pt"
-    in_features = int(X_csr.shape[1])
-    num_genus   = int(len(idx_to_label))
+    # 3) Inference poer task (same features)
+    task_dfs: dict[str, pd.DataFrame] = {}
 
-    _ensure_sparse_genus_on_path(model_dir_p=model_dir_p)
-    try:
-        # Cargamos SIEMPRE el objeto completo; evita el FutureWarning al fijar weights_only=False
-        model = torch.load(model_path, map_location=device, weights_only=False)
-    except TypeError:
-        # Para compatibilidad con PyTorch<2.5 que no tiene weights_only
-        model = torch.load(model_path, map_location=device)
+    # 3.0) Assure import of sparse modules
+    _ensure_models_code_on_path_once()
 
-    if not isinstance(model, torch.nn.Module):
-        raise RuntimeError(
-            "Este pipeline espera un modelo completo guardado con torch.save(model, 'model.pt'). "
-            "Parece que el archivo contiene un state_dict. "
-            "Vuelve a exportar guardando el objeto completo."
-        )
+    for task, task_dir in available_tasks:
+        # 3.1) Load labels for this task
+        idx_to_label = _load_idx_to_label(path=task_dir)
+        num_labels = int(len(idx_to_label))
+        k = min(topk, num_labels) # ESTO PUEDE SER PROBLEMATICO AUNQUE NUNCA PASARA
 
-    model.eval()
+        model_path = task_dir / "model.pt"
 
-    # (Opcional) Comprobación dimensional amistosa
-    fc1 = getattr(model, "fc1", None)
-    if fc1 is not None and hasattr(fc1, "in_features"):
-        if int(fc1.in_features) != in_features:
-            print(f"[WARN] Model in_features={int(fc1.in_features)} but features have {in_features}. "
+        try:
+            # Cargamos SIEMPRE el objeto completo; evita el FutureWarning al fijar weights_only=False
+            model = torch.load(model_path, map_location=device, weights_only=False)
+        except TypeError:
+            # Para compatibilidad con PyTorch<2.5 que no tiene weights_only
+            model = torch.load(model_path, map_location=device)
+
+        if not isinstance(model, torch.nn.Module):
+            raise RuntimeError(
+            "This pipeline expects a full model object saved via torch.save(model, 'model.pt'). "
+            "It looks like the file contains a state_dict; please re-export saving the full object."
+            )
+
+        model.eval()
+
+        # 3.4) Friendly dimensional check
+        fc1 = getattr(model, "fc1", None)
+        if fc1 is not None and hasattr(fc1, "in_features"):
+            if int(fc1.in_features) != in_features:
+                print(f"[WARN] Model in_features={int(fc1.in_features)} but features have {in_features}. "
                   "If it does not match, check that vpf_to_index and the model correspond to the same version..")
 
 
+        # 3.5) Batches --> Predictions
+        print(f"[INFO] Running task={task} (C={num_labels}) …")
+        records = []
+        with torch.no_grad():
+            for start in range(0, X_csr.shape[0], batch_size):
+                end = min(start + batch_size, X_csr.shape[0])
+                X_batch_csr = X_csr[start:end]
+                x_sp = _scipy_csr_to_torch_coo_batch(X_csr_batch=X_batch_csr, device=device)
 
+                logits = model(x_sp)
+                probs = F.softmax(logits, dim=1)
 
+                top1_scores, top1_idx = probs.max(dim=1)
+                tk_scores, tk_idx = probs.topk(k=k, dim=1) # torch.topk()
 
-    # 3) Inference -- batches
-    batch_size = 1024 # DECIDIR SI HO POSAM COM A PARAMETRE A CLI
-    k = min(topk, len(idx_to_label)) # tiene que haber al menos tantas etiquetas como opciones que se escojan como k
-    records = []
-    with torch.no_grad():
-        for start in range(0, X_csr.shape[0], batch_size):
-            end = min(start + batch_size, X_csr.shape[0])
-            X_batch_csr = X_csr[start:end]
-            x_sp = _scipy_csr_to_torch_coo_batch(X_csr_batch=X_batch_csr, device=device)
+                if task == "genus":
+                    pred_col = "pred_genus"
+                    score_col = "score_genus"
+                    topk_col = "topk_genus"
+                
+                else: # family
+                    pred_col = "pred_family"
+                    score_col = "score_family"
+                    topk_col = "topk_family"
 
-            logits = model(x_sp)
-            probs = F.softmax(logits, dim=1)
+                for i in range(end - start):
+                    pred = idx_to_label[int(top1_idx[i].item())] 
+                    score = float(top1_scores[i].item())
+                    tkl = [idx_to_label[int(j.item())] for j in tk_idx[i]]
+                    tks = [f"{float(s.item()):.2f}" for s in tk_scores[i]]
+                    records.append({
+                        pred_col: pred,
+                        score_col: score,
+                        topk_col: "; ".join(f"{g} ({s})" for g, s in zip(tkl, tks))
+                    })
 
-            top1_scores, top1_idx = probs.max(dim=1)
-            tk_scores, tk_idx = probs.topk(k=k, dim=1) # torch.topk()
+                del x_sp, logits, probs, top1_scores, top1_idx, tk_scores, tk_idx
 
-            for i in range(end - start):
-                pred = idx_to_label[int(top1_idx[i].item())] 
-                score = float(top1_scores[i].item())
-                tkl = [idx_to_label[int(j.item())] for j in tk_idx[i]]
-                tks = [f"{float(s.item()):.2f}" for s in tk_scores[i]]
-                records.append({
-                    "pred_genus": pred,
-                    "score": score,
-                    "topk": "; ".join(f"{g} ({s})" for g, s in zip(tkl, tks))
-                })
-
-            del x_sp, logits, probs, top1_scores, top1_idx, tk_scores, tk_idx
+            task_dfs[task] = pd.DataFrame(records)
 
     # 4) Store preds in a CSV
-    preds_df = pd.DataFrame(records)
-    preds_df.insert(0,"Accession", accessions)
+    preds_df = pd.DataFrame()
+
+    for _, df_task in task_dfs.items():
+        preds_df = pd.concat([preds_df, df_task], axis=1)
+
+
+    # Orden de rangos con Mayúsculas (como en tu lineage.json)
+    RANKS = ["Realm","Subrealm","Kingdom","Subkingdom","Phylum","Subphylum",
+            "Class","Subclass","Order","Suborder","Family","Subfamily","Genus","Subgenus","Species"]
+
+    def apply_lineage_and_tidy(
+        preds_df: pd.DataFrame,
+        model_dir_p: Path,  # .../tool_data/<base>/models/MSLxx
+        lineage_filename: str = "lineage.json",  # en tool_data/MSL_labelling/MSLxx/lineage.json
+    ) -> pd.DataFrame:
+        """
+        - Elige fuente (Genus vs Family) comparando score_genus vs score_family.
+        - Reconstruye Lineage (hasta Genus o hasta Family según la fuente elegida).
+        - Redondea scores a 3 decimales y ordena columnas.
+        """
+
+        df = preds_df.copy()
+
+        # Asegura columnas esperadas (si faltan, vacías para no romper)
+        for c in ["pred_genus","score_genus","topk_genus","pred_family","score_family","topk_family"]:
+            if c not in df.columns:
+                df[c] = np.nan
+
+        # 2) Carga lineage por GENUS (con claves de rangos Mayúsculas)
+        msl_tag = model_dir_p.name
+        try:
+            msl_tag = model_dir_p.name
+            tool_data_root = model_dir_p.parents[2]
+            lineage_path = tool_data_root / "MSL_labelling" / msl_tag / lineage_filename
+            # print(lineage_path)
+            lineage_by_genus = json.loads(lineage_path.read_text(encoding="utf-8"))
+        except Exception:
+            lineage_by_genus = {}
+
+        # Preconstruye un mapa Family -> “nodo” (tomado del primer género que pertenezca a esa familia)
+        family_node = {}
+        for g, node in lineage_by_genus.items():
+            fam = node.get("Family")
+            if fam and fam not in family_node:
+                # Copia superficial con rangos Mayúsculas
+                family_node[fam] = {k: v for k, v in node.items() if k in RANKS}
+
+        def _join_lineage(node: dict | None, up_to: str) -> str | None:
+            """
+            Build lineage from Realm to 'up__to' (keeping missing ranks)
+            """
+            if not node:
+                return None
+            out = []
+            for r in RANKS:
+                val = node.get(r,"")
+                out.append(val)
+                if r == up_to:
+                    break
+            return "; ".join(out)
+            
+        # 3) Fila a fila: escoger fuente y reconstruir
+        def _build_lineage(row):
+            g = row.get("pred_genus")
+            sg = row.get("score_genus")
+            f = row.get("pred_family")
+            sf = row.get("score_family")
+
+            # normaliza
+            g = None if g in (None, "", "Unknown") else g
+            f = None if f in (None, "", "Unknown") else f
+            sg = float(sg) if pd.notna(sg) else float("-inf")
+            sf = float(sf) if pd.notna(sf) else float("-inf")
+
+
+            # --- 1: If genus_score > family_score ---
+            if sg >= sf and g in lineage_by_genus:
+                node = lineage_by_genus.get(g)
+                return _join_lineage(node, up_to="Genus")
+            # --- 2: If genus_score > family_score ---
+            elif f in family_node:
+                node = family_node.get(f)
+                lineage_to_family = _join_lineage(node, up_to="Family")
+
+                add_genus = False
+                if g:
+                    if g not in lineage_by_genus:
+                        add_genus = True
+                    else:
+                        fam_of_g = lineage_by_genus[g].get("Family")
+                        add_genus = (fam_of_g == f)
+
+                if add_genus:
+                    return lineage_to_family + "; " + g
+                else:
+                    return lineage_to_family
+            
+            else:
+                # últimos recursos: si no hay familia válida pero hay genus en el mapa
+                if g in lineage_by_genus:
+                    return _join_lineage(lineage_by_genus.get(g), up_to="Genus")
+            return None
+
+        df["Lineage"] = df.apply(_build_lineage, axis=1)
+
+        # 4) Redondeo de scores (3 decimales) si existen
+        for sc in ("score_genus","score_family"):
+            if sc in df.columns:
+                df[sc] = pd.to_numeric(df[sc], errors="coerce").round(3)
+
+        # 5) Reordenar columnas para una salida limpia
+        order = [c for c in ["Accession",
+                            "pred_genus","score_genus","topk_genus",
+                            "pred_family","score_family","topk_family",
+                            "Lineage"]
+                if c in df.columns]
+        # Mantén también cualquier otra columna que hubiera (por si añadiste extras)
+        rest = [c for c in df.columns if c not in order]
+        df = df[order + rest]
+
+        return df
+
+
+    preds_df = apply_lineage_and_tidy(preds_df=preds_df, model_dir_p=model_dir_p)
     preds_csv = run_dirs.preds / "prediction.csv"
+    print(preds_df.head())
     _save_csv(df=preds_df, path=preds_csv)
+
 
     print(f"[PIPELINE] Predictions stored in: {preds_csv}")
 
@@ -615,6 +750,10 @@ def run_user_pipeline(
         "device_used": device,
     })
     (outdir_p / "run_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+    if run_dirs.features.exists():
+        shutil.rmtree(run_dirs.features)
+
 
     
     return fasta_p, outdir_p, model_dir_p, vpf_dict_p, fasta_parser

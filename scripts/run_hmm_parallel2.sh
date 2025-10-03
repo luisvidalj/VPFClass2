@@ -16,16 +16,16 @@ if [[ -z "$PROT_FAA" || -z "$HMMS_FILE" || -z "$OUT_DIR" || -z "$NUM_CPUS" ]]; t
 fi
 
 if ! command -v hmmsearch >/dev/null 2>&1; then
-  echo "[ERROR] No se encontró 'hmmsearch' en el PATH." >&2
+  echo "[ERROR] 'hmmsearch' not found in PATH." >&2
   exit 1
 fi
 
 if [[ ! -s "$PROT_FAA" ]]; then
-  echo "[ERROR] Archivo de proteínas no existe o está vacío: $PROT_FAA" >&2
+  echo "[ERROR] Protein file does not exist or is empty: $PROT_FAA" >&2
   exit 1
 fi
 if [[ ! -s "$HMMS_FILE" ]]; then
-  echo "[ERROR] Archivo HMM no existe o está vacío: $HMMS_FILE" >&2
+  echo "[ERROR] HMM file does not exist or is empty: $HMMS_FILE" >&2
   exit 1
 fi
 
@@ -40,13 +40,13 @@ if [[ $SPLITS -lt 1 ]]; then SPLITS=1; fi
 # 4) Contar secuencias y calcular tamaño por split
 NUM_SEQS=$(grep -c "^>" "$PROT_FAA" || true)
 if [[ $NUM_SEQS -eq 0 ]]; then
-  echo "[WARN] No se encontraron secuencias ('>') en $PROT_FAA. No se ejecutará hmmsearch." >&2
+  echo "[WARN] No protein sequences ('>') were found in $PROT_FAA. hmmsearch will not be executed." >&2
   exit 0
 fi
 SEQ_PER_SPLIT=$(( (NUM_SEQS + SPLITS - 1) / SPLITS ))
 
-echo "[INFO] Ejecutando HMMER en paralelo… (seqs=$NUM_SEQS, splits=$SPLITS, ~${SEQ_PER_SPLIT}/split)"
-echo "[INFO] Salida silenciosa; errores (si los hay) en: $LOG_ERR"
+echo "[INFO] Running Hmmsearch in parallel...  (seqs=$NUM_SEQS, splits=$SPLITS, ~${SEQ_PER_SPLIT}/split)"
+echo "[INFO] Errors (if any) in: $LOG_ERR"
 
 # 5) Dividir el .faa en OUT_DIR/split_*.faa
 #    (cada archivo comienza en un encabezado '>'; AWK rota de archivo cada n secuencias)
@@ -67,5 +67,5 @@ wait
 
 # 7) Reporte de duración
 DUR=$SECONDS
-printf "[INFO] HMMER terminado en %02d:%02d:%02d\n" $((DUR/3600)) $(((DUR%3600)/60)) $((DUR%60))
+printf "[INFO] Hmmsearch has finished (time: %02d:%02d:%02d\n)" $((DUR/3600)) $(((DUR%3600)/60)) $((DUR%60))
 

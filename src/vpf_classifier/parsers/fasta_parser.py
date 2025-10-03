@@ -72,7 +72,7 @@ class FastaParser:
             faa_out = Path(output_dir) / "output.faa"
             print("[INFO] Running Prodigal in metagenomic mode...")
             cmd = [
-                "prodigal",
+                "prodigal-gv",
                 "-i", str(self.fna_path),
                 "-a", str(faa_out),
                 "-p", "meta",  # Metagenomic mode
@@ -80,8 +80,8 @@ class FastaParser:
             ]
 
             try:
-                subprocess.run(cmd, check=True)
-                print(f"[INFO] Prodigal finished. Files saved to: {output_dir}")
+                subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
+                print(f"[INFO] Prodigal finished. File(s) saved to: {output_dir}")
             except subprocess.CalledProcessError as e:
                 raise RuntimeError(f"[ERROR] Prodigal execution failed: {e}")
 

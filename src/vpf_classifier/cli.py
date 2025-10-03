@@ -62,16 +62,25 @@ def resolve_from_markers(tool_data_root: Path, markers: str, msl: str):
     tool_data/{complete_markers|virus_markers}/models/MSL{msl}
     tool_data/{...}/{vpf_data}/{vpf_to_index.json, profiles.hmms}
     """
-    base = {"all": "complete_markers", "virus": "virus_markers"}[markers]
-    root = tool_data_root / base
+    base_map = {"all": "complete_markers", "virus": "virus_markers"}
+    if markers not in base_map:
+        raise ValueError(f"Unknown markers='{markers}'. Expected one of {list(base_map.keys())}.")
+    root = tool_data_root / base_map[markers]
     model_dir  = root / "models" / f"MSL{msl}"
     vpf_dir    = _vpf_dir_for(root)
 
+    if markers == "virus":
+        expected_json = vpf_dir / "vpf_to_index_V.json"
+        expected_hmms = vpf_dir / "profiles_virus.hmms"
+    else: # markers == "all"
+        expected_json = vpf_dir / "vpf_to_index.json"
+        expected_hmms = vpf_dir / "profiles.hmms"
 
-    json_files = list(vpf_dir.glob("*.json"))
-    hmms_files = list(vpf_dir.glob("*.hmms"))
-    vpf_dict = json_files[0] if json_files else None
-    hmm_models = hmms_files[0] if hmms_files else None
+    
+
+    vpf_dict = expected_json if expected_json.exists() else None
+    hmm_models = expected_hmms if expected_hmms.exists() else None
+
 
     return model_dir, vpf_dict, hmm_models
 
@@ -97,7 +106,6 @@ def _resolve_resources(
 
     # Finding tool_data directory and solving paths based on: markers + msl
     td_root = _find_tool_data_root(tool_data)
-    print(td_root)
     md_mark, vd_mark, hm_mark = resolve_from_markers(td_root, markers, msl)
     return md_mark, vd_mark, hm_mark, td_root
 
@@ -211,22 +219,24 @@ def main():
 
 
         if md:
-            ok_md = (md.exists() and (md/"model.pt").exists() and (md/"idx_to_label.json").exists())
-            print("[CHECK] model_dir:", md, "OK" if ok_md else "MISSING: model.pt or and idx_to_label.json")
+            ok_genus = (md.exists() and (md / "Genus"/"model.pt").exists() and (md / "Genus" / "idx_to_label.json").exists())
+            ok_fam  = (md.exists() and (md / "Family"/"model.pt").exists() and (md / "Family" / "idx_to_label.json").exists())
+            ok_md = ok_genus and ok_fam
+            print("[CHECK] model_dir:", md, "--> OK" if ok_md else "MISSING: model.pt or and idx_to_label.json")
         else:
             ok_md = False
             print("[CHECK] model_dir: not found (use --model-dir or defaults)")
 
         if vd:
             ok_vd = vd.exists()
-            print("[CHECK] vpf_to_index.json:", vd, "OK" if ok_vd else "MISSING: vpf_to_index.json")
+            print("[CHECK] vpf_to_index.json:", vd, "--> OK" if ok_vd else "MISSING: vpf_to_index.json")
         else:
             ok_vd = False
             print("[CHECK] vpf_to_index.json: not found (use --vpf-dict or defaults)")
 
         if hm:
             ok_hm = hm.exists()
-            print("[CHECK] profiles.hmms:", hm, "OK" if ok_hm else "MISSING")
+            print("[CHECK] profiles.hmms:", hm, "--> OK" if ok_hm else "MISSING")
         else:
             ok_hm = False
             print("[CHECK] profiles.hmms: not found (use --hmm-models or defaults)")

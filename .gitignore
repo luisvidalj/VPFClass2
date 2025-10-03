@@ -80,3 +80,10 @@ chatgpt.txt
 
 # tool_data (download by user)
 tool_data_v0.4.0.tar.zst
+
+# output del toy example
+/toy_example/prod_gv
+/toy_example/run_meta.json
+/toy_example/prod_gv2
+/toy_example/MSL40.fasta
+/toy_example/prod_gv3
