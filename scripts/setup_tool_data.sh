@@ -2,45 +2,39 @@
 set -euo pipefail
 
 # ==============================================================================
-# setup_tool_data.sh
+# setup_tool_data.sh  —  Descarga e instala tool_data de forma idempotente
 #
 # Uso:
-#   bash scripts/setup_tool_data_skeleton.sh virus
-#   bash scripts/setup_tool_data_skeleton.sh all
+#   bash scripts/setup_tool_data.sh virus
+#   bash scripts/setup_tool_data.sh all
 #
 # Hace:
-#   1) Crea tool_data/ si no existe
-#   2) Descarga y extrae MSL_labelling/ (si no existe)
-#   3) Según 'virus' o 'all', descarga y extrae:
-#        - virus_markers/ (vpf_data + models/MSL40/{Family,Genus})
-#        - complete_markers/ (vpf_data + models/MSL40/{Family,Genus})
-#   4) Respeta lo ya existente (no sobreescribe si ya está)
-#   5) Vuelve a la raíz del repo al terminar
+#   1) Crea tool_data/ si no existe y entra ahí
+#   2) Descarga y extrae MSL_labelling/ si no existe
+#   3) Según {virus|all}, descarga y extrae:
+#        - virus_markers/ (vpf_data + models/MSL40/Family+Genus)
+#        - complete_markers/ (vpf_data + models/MSL40/Family+Genus)
+#   4) Respeta lo existente; no re-extrae si la carpeta raíz ya está
+#   5) Vuelve a la raíz del repo
 #
-# Requisitos: curl, tar (con --zstd), sha256sum (opcional)
+# Requisitos: curl, zstd, tar
+#   - En macOS puedes instalar zstd con Homebrew:  brew install zstd
 # ==============================================================================
 
 # --------------------------
-# CONFIGURA AQUÍ TUS URLs
-# (las rutas internas del .tar.zst deben empezar en tool_data/…)
+# CONFIG: URLs de descarga
+# (carpetas raíz internas de los tars: MSL_labelling/, virus_markers/, complete_markers/)
 # --------------------------
 MSL_LABELLING_URL="${MSL_LABELLING_URL:-https://bioinfo.uib.es/~recerca/vpfclass2/MSL_labelling.tar.zst}"
-
-# Paquete con: tool_data/virus_markers/{vpf_data,models/MSL40/Family,models/MSL40/Genus}
 VIRUS_PACKAGE_URL="${VIRUS_PACKAGE_URL:-https://bioinfo.uib.es/~recerca/vpfclass2/virus_markers_MSL40.tar.zst}"
-
-# Paquete con: tool_data/complete_markers/{vpf_data,models/MSL40/Family,models/MSL40/Genus}
-COMPLETE_PACKAGE_URL="${COMPLETE_PACKAGE_URL:-https://bioinfo.uib.es/~recerca/vpfclass2/complete_markers_MSL40_Family_Genus.tar.zst}"
-
-# (Opcional) archivo con checksums si lo publicas
-SHA256SUMS_URL="${SHA256SUMS_URL:-}"
+COMPLETE_PACKAGE_URL="${COMPLETE_PACKAGE_URL:-https://bioinfo.uib.es/~recerca/vpfclass2/complete_markers_MSL40.tar.zst}"
 
 # --------------------------
 # Destino base
 # --------------------------
 TOOL_DATA_DIR="${VPF_TOOL_DATA:-tool_data}"
 
-# Guarda dir de inicio para volver luego
+# Guardamos el dir inicial para volver al final
 REPO_ROOT="$(pwd)"
 
 usage() {
@@ -52,30 +46,33 @@ need_cmd() {
   command -v "$1" >/dev/null 2>&1 || { echo "[ERROR] Necesito '$1' en PATH"; exit 1; }
 }
 
+# Descarga a fichero temporal y extrae vía 'zstd -d | tar -x' de forma portable.
+# No re-extrae si ya existe la carpeta raíz esperada.
 download_and_extract_once() {
-  local url="$1"
-  local expected_root="$2"    # p.ej. "MSL_labelling" o "virus_markers" o "complete_markers"
-  local dest="$3"             # p.ej. "$TOOL_DATA_DIR"
+  local url="$1"             # URL del .tar.zst
+  local expected_root="$2"   # carpeta raíz que debe aparecer tras extraer (p.ej. MSL_labelling, virus_markers, complete_markers)
+  local dest="$3"            # destino (normalmente "." dentro de tool_data)
 
-  # Si ya existe la carpeta objetivo, no hacemos nada
   if [[ -d "${dest}/${expected_root}" ]]; then
     echo "[SKIP] ${expected_root}/ ya existe en ${dest}"
     return 0
   fi
 
   echo "[INFO] Descargando paquete: ${url}"
-  # Descarga a un tmp
   local tmp_tar
   tmp_tar="$(mktemp -t vpf_dl_XXXX.tar.zst)"
+  # Reintentos + reanudación (si el servidor lo permite)
   curl -L --fail --retry 3 --continue-at - -o "${tmp_tar}" "${url}"
 
-  echo "[INFO] Extrayendo en ${dest} (con zstd)…"
+  echo "[INFO] Extrayendo en ${dest} con 'zstd -d | tar -x' (modo compatible macOS/Linux)…"
   mkdir -p "${dest}"
-  tar --zstd -xf "${tmp_tar}" -C "${dest}"
+  # Nota: --long=31 fue usado en compresión; para descompresión no es estrictamente necesario,
+  # pero lo incluimos por compatibilidad con builds antiguos.
+  zstd -d --long=31 -T0 < "${tmp_tar}" | tar -C "${dest}" -xf -
 
-  # Verificamos que lo esperado apareció
+  # Verificación de que la carpeta raíz esperada existe tras extraer
   if [[ ! -d "${dest}/${expected_root}" ]]; then
-    echo "[ERROR] Tras extraer, no encuentro ${dest}/${expected_root}. ¿El tar tiene rutas correctas (tool_data/${expected_root})?"
+    echo "[ERROR] Tras extraer, no encuentro ${dest}/${expected_root}. Revisa la estructura interna del tar."
     rm -f "${tmp_tar}"
     exit 1
   fi
@@ -87,11 +84,11 @@ download_and_extract_once() {
 verify_basic_layout() {
   echo "[CHECK] Comprobaciones rápidas…"
 
-  # Taxonomía (requerida)
-  if ! ls -1 "${TOOL_DATA_DIR}/MSL_labelling"/MSL*/lineage.json >/dev/null 2>&1; then
-    echo "[WARN] No encuentro lineage.json en MSL_labelling/*/"
-  else
+  # Taxonomía
+  if ls -1 "${TOOL_DATA_DIR}/MSL_labelling"/MSL*/lineage.json >/dev/null 2>&1; then
     echo "[OK] MSL_labelling/*/lineage.json presente"
+  else
+    echo "[WARN] No encuentro lineage.json en MSL_labelling/*/"
   fi
 
   # virus_markers (si existe)
@@ -99,8 +96,9 @@ verify_basic_layout() {
     [[ -f "${TOOL_DATA_DIR}/virus_markers/vpf_data/names_virus.txt" ]] || echo "[WARN] Falta names_virus.txt"
     [[ -f "${TOOL_DATA_DIR}/virus_markers/vpf_data/profiles_virus.hmms" ]] || echo "[WARN] Falta profiles_virus.hmms"
     [[ -f "${TOOL_DATA_DIR}/virus_markers/vpf_data/vpf_to_index_V.json" ]] || echo "[WARN] Falta vpf_to_index_V.json"
-    [[ -d "${TOOL_DATA_DIR}/virus_markers/models/MSL40/Genus" ]] && [[ -d "${TOOL_DATA_DIR}/virus_markers/models/MSL40/Family" ]] \
-      && echo "[OK] virus_markers modelos MSL40 (Family+Genus) presentes"
+    if [[ -d "${TOOL_DATA_DIR}/virus_markers/models/MSL40/Genus" && -d "${TOOL_DATA_DIR}/virus_markers/models/MSL40/Family" ]]; then
+      echo "[OK] virus_markers modelos MSL40 (Family+Genus) presentes"
+    fi
   fi
 
   # complete_markers (si existe)
@@ -108,8 +106,9 @@ verify_basic_layout() {
     [[ -f "${TOOL_DATA_DIR}/complete_markers/vpf_data/model_names.txt" ]] || echo "[WARN] Falta model_names.txt"
     [[ -f "${TOOL_DATA_DIR}/complete_markers/vpf_data/profiles.hmms" ]] || echo "[WARN] Falta profiles.hmms"
     [[ -f "${TOOL_DATA_DIR}/complete_markers/vpf_data/vpf_to_index.json" ]] || echo "[WARN] Falta vpf_to_index.json"
-    [[ -d "${TOOL_DATA_DIR}/complete_markers/models/MSL40/Genus" ]] && [[ -d "${TOOL_DATA_DIR}/complete_markers/models/MSL40/Family" ]] \
-      && echo "[OK] complete_markers modelos MSL40 (Family+Genus) presentes"
+    if [[ -d "${TOOL_DATA_DIR}/complete_markers/models/MSL40/Genus" && -d "${TOOL_DATA_DIR}/complete_markers/models/MSL40/Family" ]]; then
+      echo "[OK] complete_markers modelos MSL40 (Family+Genus) presentes"
+    fi
   fi
 }
 
@@ -121,12 +120,11 @@ MODE="$1"
 [[ "${MODE}" == "virus" || "${MODE}" == "all" ]] || usage
 
 need_cmd curl
+need_cmd zstd
 need_cmd tar
 
 echo "[INFO] Creando/usar carpeta ${TOOL_DATA_DIR}"
 mkdir -p "${TOOL_DATA_DIR}"
-
-# Movernos a tool_data/ para extraer paquetes con rutas tool_data/… coherentes
 cd "${TOOL_DATA_DIR}"
 
 # 1) Siempre MSL_labelling
@@ -139,19 +137,7 @@ else
   download_and_extract_once "${COMPLETE_PACKAGE_URL}" "complete_markers" "."
 fi
 
-# (Opcional) Verificación de checksums globales si se publica SHA256SUMS
-if [[ -n "${SHA256SUMS_URL}" ]]; then
-  echo "[INFO] Verificando SHA256SUMS…"
-  tmp_sum="$(mktemp -t vpf_sha_XXXX.txt)"
-  curl -L --fail -o "${tmp_sum}" "${SHA256SUMS_URL}" || { echo "[WARN] No pude descargar SHA256SUMS"; true; }
-  if [[ -s "${tmp_sum}" ]]; then
-    # Nota: esto verifica los archivos existentes; omite los que no estén
-    sha256sum -c "${tmp_sum}" || echo "[WARN] Algún checksum no coincide. Revisa tus descargas."
-  fi
-  rm -f "${tmp_sum}"
-fi
-
-# 3) Comprobación básica de layout
+# 3) Comprobación básica
 verify_basic_layout
 
 # 4) Volver a la raíz del repo
