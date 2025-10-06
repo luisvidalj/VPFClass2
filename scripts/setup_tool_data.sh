@@ -24,13 +24,13 @@ set -euo pipefail
 # CONFIGURA AQUÍ TUS URLs
 # (las rutas internas del .tar.zst deben empezar en tool_data/…)
 # --------------------------
-MSL_LABELLING_URL="${MSL_LABELLING_URL:-https://example.org/VPFClass2/MSL_labelling.tar.zst}"
+MSL_LABELLING_URL="${MSL_LABELLING_URL:-https://bioinfo.uib.es/~recerca/vpfclass2/MSL_labelling.tar.zst}"
 
 # Paquete con: tool_data/virus_markers/{vpf_data,models/MSL40/Family,models/MSL40/Genus}
 VIRUS_PACKAGE_URL="${VIRUS_PACKAGE_URL:-https://bioinfo.uib.es/~recerca/vpfclass2/virus_markers_MSL40.tar.zst}"
 
 # Paquete con: tool_data/complete_markers/{vpf_data,models/MSL40/Family,models/MSL40/Genus}
-COMPLETE_PACKAGE_URL="${COMPLETE_PACKAGE_URL:-https://example.org/VPFClass2/complete_markers_MSL40_Family_Genus.tar.zst}"
+COMPLETE_PACKAGE_URL="${COMPLETE_PACKAGE_URL:-https://bioinfo.uib.es/~recerca/vpfclass2/complete_markers_MSL40_Family_Genus.tar.zst}"
 
 # (Opcional) archivo con checksums si lo publicas
 SHA256SUMS_URL="${SHA256SUMS_URL:-}"
