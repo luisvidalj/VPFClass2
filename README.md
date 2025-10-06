@@ -28,6 +28,10 @@ Download the protein profiles and trained models (note: the archive is large, ~3
 ```bash
 wget https://bioinfo.uib.es/~recerca/vpfclass2/tool_data_v0.4.0.tar.zst
 ```
+
+Link de virus_markers:
+https://bioinfo.uib.es/~recerca/vpfclass2/virus_markers_MSL40.tar.zst
+
 Decompress the archive (requires `zstd` installed).
 If you do not have `zstd` installed, you can install it as follows:
 - **Linux (Debian/Ubuntu)**:
