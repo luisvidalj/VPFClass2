@@ -84,7 +84,6 @@ class FastaParser:
                     "--keep-intermediate"
                 ]
             
-            print("[INFO] Running Prodigal in metagenomic mode...")
             cmd = [
                 "prodigal-gv",
                 "-i", str(self.fna_path),
@@ -97,9 +96,11 @@ class FastaParser:
 
             try:
                 try:
+                    print("[INFO] Running (parallel) Prodigal in metagenomic mode...")
                     subprocess.run(cmd2, check=True, stdout=subprocess.DEVNULL)
                     print(f"[INFO] Parallel prodigal-gv finished. File(s) saved to: {output_dir}")
                 except:
+                    print("[INFO] Running Prodigal in metagenomic mode...")
                     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
                     print(f"[INFO] Prodigal finished. File(s) saved to: {output_dir}")
             except subprocess.CalledProcessError as e:
