@@ -309,6 +309,8 @@ def run_user_pipeline(
     fasta_parser = FastaParser(fna_path=str(fasta_p))
     fasta_parser.parse_fasta_to_dataframe()
 
+    full_accessions = fasta_parser.ncbi_df['Accession'].tolist()
+
     # Guardar cabeceras en subcarpeta FASTA
     # headers_csv = run_dirs.fasta / "fasta_headers.csv"
     # _save_csv(fasta_parser.ncbi_df, headers_csv)
@@ -424,6 +426,7 @@ def run_user_pipeline(
         sparse_mat = csr_matrix(sparse_mat)
 
     accessions = vpf.df_virus_hmm["Accession"].tolist()
+    missing_acccessions = [acc for acc in full_accessions if acc not in accessions]
     vpf_to_index = getattr(vpf, "vpf_to_index", None)
     if vpf_to_index is None:
         # fallback: leer del json pasado por el usuario
@@ -610,7 +613,19 @@ def run_user_pipeline(
             task_dfs[task] = pd.DataFrame(records)
 
     # 4) Store preds in a CSV
-    preds_df = pd.DataFrame()
+
+    # 4.0) Accessions length check
+    n_rows = int(X_csr.shape[0])
+    if len(accessions) != n_rows:
+        raise ValueError(
+            "[ERROR] Row mismatch: features rows != accessions .\n"
+            f" - X_csr rows: {n_rows}\n"
+            f" - accessions: {len(accessions)}\n"
+            "Asegurate de que el orden "
+        )
+    
+    preds_df = pd.DataFrame({"Accession": accessions})
+
 
     for _, df_task in task_dfs.items():
         preds_df = pd.concat([preds_df, df_task], axis=1)
@@ -738,6 +753,16 @@ def run_user_pipeline(
     print(preds_df.head())
     _save_csv(df=preds_df, path=preds_csv)
 
+    if missing_acccessions:
+        missing_df = pd.DataFrame({
+            "Accession": missing_acccessions
+        })
+
+        for col in preds_df.columns:
+            if col != "Accession" and col not in missing_df.columns:
+                missing_df[col] = np.nan
+
+        preds_df = pd.concat([preds_df, missing_df], ignore_index=True)
 
     print(f"[PIPELINE] Predictions stored in: {preds_csv}")
 

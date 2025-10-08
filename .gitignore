@@ -87,6 +87,8 @@ tool_data_v0.4.0.tar.zst
 /toy_example/prod_gv2
 /toy_example/MSL40.fasta
 /toy_example/prod_gv3
+/toy_example/run_parallelpgv
+/toy_example/run_parallelpgv2
 
 
 # compressed files

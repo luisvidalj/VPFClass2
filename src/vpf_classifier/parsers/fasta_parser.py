@@ -43,7 +43,8 @@ class FastaParser:
         return self.ncbi_df if return_df else None
     
 
-    def run_prodigal(self, output_dir: Path = Files.PRODIGAL) -> Path:
+    def run_prodigal(self, output_dir: Path = Files.PRODIGAL, num_cpus: int = 10,
+                     seqs_x_split: int=1000) -> Path:
         """
         Runs Prodigal on the input FASTA file if not already executed.
 
@@ -69,7 +70,20 @@ class FastaParser:
             print(f"[INFO] Prodigal output already found at {output_dir}")
             self.faa = faa_out
         else:
+            
             faa_out = Path(output_dir) / "output.faa"
+
+            
+            script_path = SCRIPTS_DIR / "run_prodigalgv_parallel.sh"
+            cmd2 = [
+                    str(script_path),
+                    str(self.fna_path),
+                    str(Path(output_dir)),
+                    str(num_cpus),
+                    str(seqs_x_split),
+                    "--keep-intermediate"
+                ]
+            
             print("[INFO] Running Prodigal in metagenomic mode...")
             cmd = [
                 "prodigal-gv",
@@ -79,9 +93,15 @@ class FastaParser:
                 "-q"           # Quiet mode (suppress output)
             ]
 
+            subprocess.run(cmd2, check=True, stdout=subprocess.DEVNULL)
+
             try:
-                subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
-                print(f"[INFO] Prodigal finished. File(s) saved to: {output_dir}")
+                try:
+                    subprocess.run(cmd2, check=True, stdout=subprocess.DEVNULL)
+                    print(f"[INFO] Parallel prodigal-gv finished. File(s) saved to: {output_dir}")
+                except:
+                    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
+                    print(f"[INFO] Prodigal finished. File(s) saved to: {output_dir}")
             except subprocess.CalledProcessError as e:
                 raise RuntimeError(f"[ERROR] Prodigal execution failed: {e}")
 
