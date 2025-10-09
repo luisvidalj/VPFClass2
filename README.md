@@ -1,9 +1,9 @@
 # VPF-Class 2
 
-**VPF-Class 2** is a machine learning–based tool for viral taxonomic classification. It takes raw viral sequences as input, predicts protein-coding genes, identifies marker protein families through HMMER searches, and uses a sparse neural network to assign taxonomic labels down to the genus level. The tool is designed to be modular, reproducible, and easy to use both for benchmarking against ICTV releases and for real-world applications where users submit novel viral contigs for classification.
+**VPF-Class 2** VPF-Class2 is a hybrid tool combining reference alignment and machine learning for viral taxonomic classification. It takes raw viral sequences as input, predicts protein-coding genes, identifies marker protein families through HMMER searches, and uses a neural network to assign taxonomic labels down to the genus level. The tool is designed to be modular, reproducible, and easy to use both for benchmarking against ICTV releases and for real-world applications where users submit novel viral contigs for classification.
 
 
-## Setup and environment installation
+## 1 - Setup and environment installation
 Clone the repository and move into:
 
 ```bash
@@ -22,38 +22,25 @@ conda activate vpfclass
 conda env create -f environment_gpu.yml
 conda activate vpfclass-gpu
 ``` 
+### Marker profiles selection
+
+Before downloading the data, choose which marker profiles you want to use:
+
+- **Virus markers** → smaller dataset (~17 GB), only includes profiles associated with viruses (**recommended**, see [paper reference] for details).  
+- **Complete markers** → larger dataset (~30 GB), includes all GeNomad profiles (viruses, plasmids, chromosomes).
 
 
-Download the protein profiles and trained models (note: the archive is large, ~35 GB).
 ```bash
-wget https://bioinfo.uib.es/~recerca/vpfclass2/tool_data_v0.4.0.tar.zst
+# Viral markers setup
+bash scripts/setup_tool_data.sh virus
+
+# Complete markers setup
+bash scripts/setup_tool_data.sh all
 ```
 
-Link de virus_markers:
-https://bioinfo.uib.es/~recerca/vpfclass2/virus_markers_MSL40.tar.zst
+> **Note:** If one dataset has already been installed, the other can also be added later — however, note that the total storage required will be approximately 60 GB.
 
-Decompress the archive (requires `zstd` installed).
-If you do not have `zstd` installed, you can install it as follows:
-- **Linux (Debian/Ubuntu)**:
-```bash
-sudo apt update && sudo apt install zstd
-```
 
-- **masOS (Homebrew)**:
-```bash
-brew install zstd
-```
-
-- **Using conda (any platform)**
-```bash
-conda install -c conda-forge zstd
-```
-
-When `zstd` is available:
-```bash
-zstd -d --long=31 -T4 < tool_data_v0.4.0.tar.zst | tar -xvf -
-pip install -e .
-```
 
 ## Usage
 
@@ -61,10 +48,11 @@ VPF-Class 2 provides two main commands: `check` and `predict`.
 
 ### Check setup
 
-Verify that the required models and marker profiles are correctly available:
+Verify that the required models and marker profiles are correctly installed.  
+With the default setup, you should be able to successfully run:
 
 ```bash
-vpfclass2 check --msl 40 --markers all
+vpfclass2 check --msl 40 --markers virus
 ```
 Where
 
@@ -77,7 +65,7 @@ Where
 ### Run predictions
 
 ```bash
-vpfclass2 predict --fasta test/mini_test.fna --outdir toy_example/output_test --markers virus --msl 39
+vpfclass2 predict --fasta test/mini_test.fna --outdir toy_example/readme --markers virus --msl 40
 ``` 
 
 Where the arguments:
@@ -86,32 +74,30 @@ Where the arguments:
 - `markers`: see above.
 - `msl`: model version (ICTV release) to use. See above.
 
+Parallelization is automatically configured to use 8 CPUs by default.  
+This can be adjusted with the `--num-cpus` flag (e.g., `--num-cpus 28`).
+
 ### Output structure
 
 After running `vpfclass2 predict`, results will be saved in the specified `--outdir`.  
 For example:
 
 ```bash
-$ tree test/output_test/
-test/output_test/
-├── fasta
-│   └── fasta_headers.csv
-├── features
-│   ├── accessions.txt
-│   ├── features_counts_sparse.npz
-│   ├── features_stats.json
-│   └── vpf_to_index.used.json
-├── hmmer
-│   ├── hmm_hits.csv
+toy_example/readme/
+├── 0_preds
+│   └── prediction.csv
+├── 1_prodigal
+│   ├── logs
+│   │   ├── shard_0001.stderr.log
+│   │   └── shard_0001.stdout.log
+│   ├── output.faa
+│   ├── shard_outputs
+│   └── shards
+├── 2_hmmer
 │   ├── hmmsearch.stderr.log
 │   ├── split_1.faa
 │   ├── split_1.tbl
 │   ├── split_2.faa
 │   └── split_2.tbl
-├── logs
-├── preds
-│   └── prediction.csv
-├── prodigal
-│   ├── output.faa
-│   └── prodigal_proteins.csv
 └── run_meta.json
+```

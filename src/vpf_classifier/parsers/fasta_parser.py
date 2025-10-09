@@ -43,7 +43,7 @@ class FastaParser:
         return self.ncbi_df if return_df else None
     
 
-    def run_prodigal(self, output_dir: Path = Files.PRODIGAL, num_cpus: int = 10,
+    def run_prodigal(self, output_dir: Path = Files.PRODIGAL, num_cpus: int = 8,
                      seqs_x_split: int=1000) -> Path:
         """
         Runs Prodigal on the input FASTA file if not already executed.
@@ -81,7 +81,7 @@ class FastaParser:
                     str(Path(output_dir)),
                     str(num_cpus),
                     str(seqs_x_split),
-                    "--keep-intermediate"
+                    #"--keep-intermediate"
                 ]
             
             cmd = [
@@ -114,7 +114,7 @@ class FastaParser:
 
     def run_hmmer(self, hmm_models: Path = Files.HMM_MODELS, 
                   output_dir: Path = Files.HMM_OUTPUT_MULTIPLE, 
-                  num_cpus: int=10):
+                  num_cpus: int=8):
         """
         Calls the external shell script to run hmmsearch in parallel.
         """

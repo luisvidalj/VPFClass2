@@ -112,6 +112,55 @@ verify_basic_layout() {
   fi
 }
 
+# Install non editable mode
+install_pkg() {
+  # Permite saltarse la instalación (p.ej., en CI) con SKIP_PIP=1
+  if [[ "${SKIP_PIP:-0}" == "1" ]]; then
+    echo "[SKIP] SKIP_PIP=1 → no se ejecuta 'pip install .'"
+    return 0
+  fi
+
+  echo "[INFO] Installing VPF-Class 2 (non-editable)…"
+  # Usa el python del entorno activo
+  if python -m pip install -q .; then
+    echo "[OK] Package installed."
+  else
+    echo "[ERROR] 'pip install .' failed. Make sure your conda env is ACTIVE and you have write permissions."
+    exit 1
+  fi
+}
+
+
+# --- Helper para instalar el paquete en editable -----------------------
+install_editable_pkg() {
+  # Si SKIP_PIP=1, no instalamos
+  if [[ "${SKIP_PIP:-0}" == "1" ]]; then
+    echo "[SKIP] SKIP_PIP=1 → no se ejecuta 'pip install -e .'"
+    return 0
+  fi
+
+  # Comprobar si ya es importable
+  if python - <<'PY' >/dev/null 2>&1
+import importlib.util
+import sys
+sys.exit(0 if importlib.util.find_spec('vpf_classifier') else 1)
+PY
+  then
+    echo "[OK] Paquete 'vpf_classifier' ya importable; no es necesario instalar."
+    return 0
+  fi
+
+  echo "[INFO] Instalando VPF-Class 2 en modo editable…"
+  # -q silencioso; quita -q si quieres ver más logs
+  if python -m pip install -q -e .; then
+    echo "[OK] Instalación editable completada."
+  else
+    echo "[ERROR] Falló 'pip install -e .'. Asegúrate de tener el entorno conda ACTIVADO y permisos de escritura."
+    exit 1
+  fi
+}
+
+
 # --------------------------
 # MAIN
 # --------------------------
@@ -143,3 +192,6 @@ verify_basic_layout
 # 4) Volver a la raíz del repo
 cd "${REPO_ROOT}"
 echo "[DONE] tool_data listo. Volviendo a ${REPO_ROOT}"
+
+#install_editable_pkg
+install_pkg

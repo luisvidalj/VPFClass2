@@ -272,7 +272,7 @@ def run_user_pipeline(
     #print(f"    - fasta:     {run_dirs.fasta}")
     print(f"    - prodigal:  {run_dirs.prodigal}")
     print(f"    - hmmer:     {run_dirs.hmmer}")
-    print(f"    - features:  {run_dirs.features}")
+    #print(f"    - features:  {run_dirs.features}")
     print(f"    - preds:     {run_dirs.preds}")
     print("=====================================================================")
 
@@ -296,7 +296,7 @@ def run_user_pipeline(
             #"fasta": str(run_dirs.fasta),
             "prodigal": str(run_dirs.prodigal),
             "hmmer": str(run_dirs.hmmer),
-            "features": str(run_dirs.features),
+            #"features": str(run_dirs.features),
             "preds": str(run_dirs.preds),
             # "logs": str(run_dirs.logs),
         },
@@ -461,7 +461,7 @@ def run_user_pipeline(
     # }
     #(run_dirs.features / "features_stats.json").write_text(json.dumps(features_stats, indent=2), encoding="utf-8")
 
-    print(f"[INFO] Features (sparse CSR) saved: {features_npz_path}")
+    # print(f"[INFO] Features (sparse CSR) saved: {features_npz_path}")
     # print(f"[PIPELINE] Virus Accessions: {accessions_path}")
     # print(f"[PIPELINE] VPF map: {vpf_map_path}")
     # print(f"[PIPELINE] Stats: {features_stats}")

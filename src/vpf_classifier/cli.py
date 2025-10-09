@@ -188,7 +188,7 @@ def main():
     pred.add_argument("--topk", type=int, default=3)
     pred.add_argument("--batch-size", type=int, default=1024, help="Batch for inference (optional, if exposed)")
     
-    pred.add_argument("--markers", choices=["all","virus"], default="all",
+    pred.add_argument("--markers", choices=["all","virus"], default="virus",
                       help="Choose 'all' to use the 227k profile markers or 'virus' to use the viral specific ones. Default 'all'")
     pred.add_argument("--msl", choices=["40", "39", "37", "35"], default="40",
                   help="MSL Release the model has been trained with. Availables: 40,39,37,35")
@@ -201,7 +201,7 @@ def main():
     # chk.add_argument("--model-dir", default=None)
     # chk.add_argument("--vpf-dict", default=None)
     # chk.add_argument("--hmm-models", default=None)
-    chk.add_argument("--markers", choices=["all", "virus"], default="all")
+    chk.add_argument("--markers", choices=["all", "virus"], default="virus")
     chk.add_argument("--msl", choices=["40", "39", "37", "35"], default="40")
     chk.add_argument("--tool-data", default=None)
 
