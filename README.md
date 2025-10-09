@@ -8,6 +8,7 @@ Clone the repository and move into:
 
 ```bash
 git clone https://github.com/luisvidalj/VPFClass2.git
+git clone https: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//@github.com/luisvidalj/VPFClass2.git
 cd VPFClass2
 ```
 
