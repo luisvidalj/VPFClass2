@@ -385,8 +385,8 @@ def run_user_pipeline(
         hmm_output_dir=run_dirs.hmmer,                 # <-- importante: nuestros .tbl van a outdir/hmmer/
     )
 
-    vpf.parse_multiple_hmm()
-
+    vpf.parse_multiple_hmm_parallel()
+    
 
     # Guardamos los hits por virus 
     # hits_csv = run_dirs.hmmer / "hmm_hits.csv"
@@ -751,18 +751,19 @@ def run_user_pipeline(
     preds_df = apply_lineage_and_tidy(preds_df=preds_df, model_dir_p=model_dir_p)
     preds_csv = run_dirs.preds / "prediction.csv"
     print(preds_df.head())
-    _save_csv(df=preds_df, path=preds_csv)
 
     if missing_acccessions:
         missing_df = pd.DataFrame({
             "Accession": missing_acccessions
         })
+        print(f"[INFO] {len(missing_acccessions)} virus can not be annotated")
 
         for col in preds_df.columns:
-            if col != "Accession" and col not in missing_df.columns:
+            if col not in missing_df.columns:
                 missing_df[col] = np.nan
 
         preds_df = pd.concat([preds_df, missing_df], ignore_index=True)
+        _save_csv(df=preds_df, path=preds_csv)
 
     print(f"[PIPELINE] Predictions stored in: {preds_csv}")
 

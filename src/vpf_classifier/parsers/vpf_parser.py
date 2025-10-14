@@ -5,11 +5,12 @@ from collections import Counter
 from scipy.sparse import csr_matrix, vstack, lil_matrix
 from sklearn.metrics.pairwise import cosine_similarity
 from typing import Optional
-import glob
-import os
+import glob, os
+from itertools import chain
 import json
 from pathlib import Path
 from typing import Optional
+from multiprocessing import get_context
 
 from vpf_classifier.utils.config import Files
 from vpf_classifier.utils.config import Constants
@@ -98,6 +99,93 @@ class VPF_parser:
         # self._add_vpf_counts_sparse_optimized()
         self._add_vpf_counts_sparse_fixed()
         # print("[INFO] Aggregated VPF hit matrix available at .df_virus_hmm")
+
+
+    def _parse_tbl_file_worker(args):
+        file, evalue_threshold = args
+        # Salida: tuplas con el mismo esquema que usas en parse_multiple_hmm
+        # columnas --> ['hmm_name','id','bitscore','cluster_num','evalue']
+        rows = []
+        with open(file) as handle:
+            for qres in SearchIO.parse(handle, 'hmmer3-tab'):
+                qid = qres.id  # == hmm_name en tu implementación actual
+                for hit in qres.hits:
+                    ev = getattr(hit, 'evalue', None)
+                    if (evalue_threshold is None) or (ev is not None and ev < evalue_threshold):
+                        rows.append((
+                            qid,
+                            getattr(hit, 'id', None),
+                            float(getattr(hit, 'bitscore', 0.0)),
+                            getattr(hit, 'cluster_num', None),
+                            float(ev) if ev is not None else None
+                        ))
+        return rows
+    
+
+    def parse_multiple_hmm_parallel(
+    self,
+    unique_hit: bool = False,                   # reservado por si lo usas más adelante
+    hmm_output_folder: Optional[str] = None,
+    num_cpus: Optional[int] = None
+    ):
+        """
+        Versión paralela de parse_multiple_hmm que genera EXACTAMENTE el mismo
+        DataFrame (columnas y tipos), salvo por el orden de las filas.
+        """
+
+        # Misma definición de columnas que en tu versión secuencial
+        columns = ['hmm_name', 'id', 'bitscore', 'cluster_num', 'evalue']
+
+        folder = Path(hmm_output_folder) if hmm_output_folder else self._hmm_output_dir
+        print(f"[INFO] (Parallel) Parsing HMMER .tbl files from {folder}...")
+        output_files = sorted(glob.glob(str(folder / "*.tbl")))  # ordenado por reproducibilidad
+
+        if not output_files:
+            print("[WARN] No .tbl files found; resulting df_hmm will be empty.")
+            self.df_hmm = pd.DataFrame(columns=columns)
+            # Mantiene el mismo flujo aguas abajo
+            self._aggregate_by_virus()
+            self._merge_taxonomy()
+            self._add_vpf_counts_sparse_fixed()
+            return
+
+        # CPUs
+        if num_cpus is None or num_cpus < 1:
+            num_cpus = max(1, (os.cpu_count() or 1) - 1)
+
+        # Usamos 'fork' si existe (Linux/macOS) para evitar problemas con __main__;
+        # si no existe (p.ej. Windows), get_context lanzará y caemos a 'spawn'.
+        try:
+            ctx = get_context("fork")
+        except ValueError:
+            ctx = get_context()  # fallback (spawn/forkserver según plataforma)
+
+        # Map paralelo por archivo
+        with ctx.Pool(processes=num_cpus) as pool:
+            results = pool.map(
+                VPF_parser._parse_tbl_file_worker,
+                [(f, self.evalue) for f in output_files]
+            )
+
+        # Flatten de todas las filas
+        all_rows = list(chain.from_iterable(results))
+
+        # Construimos el DataFrame con el mismo esquema que el método original
+        self.df_hmm = pd.DataFrame.from_records(all_rows, columns=columns)
+
+        # Nota: ya hemos filtrado por evalue en el worker. Si quieres mantener el
+        # log informativo y asegurar igualdad semántica, re-aplicamos el filtro:
+        if self.evalue is not None and len(self.df_hmm) > 0:
+            original = self.df_hmm.shape[0]
+            self.df_hmm = self.df_hmm[self.df_hmm['evalue'] < self.evalue]
+            print(f"[INFO] Filtered HMM hits by e-value < {self.evalue}: {self.df_hmm.shape[0]} / {original} kept")
+
+        # Resto del pipeline idéntico
+        self._aggregate_by_virus()
+        self._merge_taxonomy()
+        self._add_vpf_counts_sparse_fixed()
+
+
 
 
     def _aggregate_by_virus(self):
