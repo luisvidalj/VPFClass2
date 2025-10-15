@@ -50,7 +50,7 @@ class VPF_parser:
         # --- Almacenar overrides ---
         self._vpf_dict_path = vpf_dict_path
         self._hmm_output_dir = Path(hmm_output_dir) if hmm_output_dir is not None else Files.HMM_OUTPUT_MULTIPLE
-
+        self._num_cpus = num_cpus
         # Donam opcio a normalitzar
         self.vector_norm = vector_norm
 
@@ -133,13 +133,13 @@ class VPF_parser:
     def parse_multiple_hmm_parallel(
     self,
     unique_hit: bool = False,                   # reservado por si más adelante
-    hmm_output_folder: Optional[str] = None,
-    num_cpus: Optional[int] = None,
+    hmm_output_folder: Optional[str] = None
     ):
         """
         Versión paralela de parse_multiple_hmm que genera EXACTAMENTE el mismo
         DataFrame (columnas y tipos), salvo por el orden de las filas.
         """
+
 
         # Misma definición de columnas que en tu versión secuencial
         columns = ['hmm_name', 'id', 'bitscore', 'cluster_num', 'evalue']
@@ -158,8 +158,8 @@ class VPF_parser:
             return
 
         # CPUs
-        if num_cpus is None or num_cpus < 1:
-            num_cpus = max(1, (os.cpu_count() or 1) - 1)
+        if self._num_cpus is None or self._num_cpus < 1:
+            self._num_cpus = max(1, (os.cpu_count() or 1) - 1)
 
         # Usamos 'fork' si existe (Linux/macOS) para evitar problemas con __main__;
         # si no existe (p.ej. Windows), get_context lanzará y caemos a 'spawn'.
@@ -169,7 +169,7 @@ class VPF_parser:
             ctx = get_context()  # fallback (spawn/forkserver según plataforma)
 
         # Map paralelo por archivo
-        with ctx.Pool(processes=num_cpus) as pool:
+        with ctx.Pool(processes=self._num_cpus) as pool:
             results = pool.map(
                 VPF_parser._parse_tbl_file_worker,
                 [(f, self.evalue) for f in output_files]

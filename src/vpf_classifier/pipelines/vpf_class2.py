@@ -383,6 +383,7 @@ def run_user_pipeline(
         num_cpus=int(num_cpus),
         vpf_dict_path=Path(vpf_dict_p),                # <-- importante (evita el "hack" de _vpf_dict_path)
         hmm_output_dir=run_dirs.hmmer,                 # <-- importante: nuestros .tbl van a outdir/hmmer/
+        vector_norm="l2"
     )
 
     vpf.parse_multiple_hmm_parallel()
