@@ -7,7 +7,7 @@ from vpf_classifier.utils.config import Files
 
 
 
-def run_pipeline(e_value_threshold=1e-3, num_cpus=12):
+def run_pipeline(e_value_threshold=1e-3, num_cpus=12, vector_norm=None):
 
     import shutil
 
@@ -24,8 +24,8 @@ def run_pipeline(e_value_threshold=1e-3, num_cpus=12):
     df_proteins = prodigal.parse_prodigal()
 
     print("[STEP 3] Running HMMER (if needed) and parsing .tbl hits...")
-    vpf = VPF_parser(parser=fasta_parser,hmm_file=Files.HMM_MODELS ,e_value_threshold=e_value_threshold, num_cpus=num_cpus)
-    vpf.parse_multiple_hmm()
+    vpf = VPF_parser(parser=fasta_parser,hmm_file=Files.HMM_MODELS ,e_value_threshold=e_value_threshold, num_cpus=num_cpus,vector_norm=vector_norm)
+    vpf.parse_multiple_hmm_parallel()
 
     print(f"[STEP 4] Merging VPF hits with taxonomic metadata from ICTV ({Files.ICTV_RELEASE})")
     ictv_df = pd.read_csv(Files.ML, sep=";")

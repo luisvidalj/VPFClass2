@@ -40,15 +40,19 @@ class VPF_parser:
         # --- NUEVO ---
         vpf_dict_path: Optional[Path] = None,
         hmm_output_dir: Optional[Path] = None,
+        vector_norm: Optional[str] = None, # l2, l1 or None
     ):
         self.parser = parser
         self.evalue = e_value_threshold
         self.df_hmm = None
         self.df_virus_hmm = None
 
-        # --- NUEVO: almacenar overrides ---
+        # --- Almacenar overrides ---
         self._vpf_dict_path = vpf_dict_path
         self._hmm_output_dir = Path(hmm_output_dir) if hmm_output_dir is not None else Files.HMM_OUTPUT_MULTIPLE
+
+        # Donam opcio a normalitzar
+        self.vector_norm = vector_norm
 
         # Miramos si ya hay .tbl en la carpeta seleccionada; si no, ejecutamos hmmsearch ahí
         output_tbls = glob.glob(str(self._hmm_output_dir / "*.tbl"))
@@ -106,12 +110,14 @@ class VPF_parser:
         # Salida: tuplas con el mismo esquema que usas en parse_multiple_hmm
         # columnas --> ['hmm_name','id','bitscore','cluster_num','evalue']
         rows = []
+        total_rows = 0
         with open(file) as handle:
             for qres in SearchIO.parse(handle, 'hmmer3-tab'):
                 qid = qres.id  # == hmm_name en tu implementación actual
                 for hit in qres.hits:
                     ev = getattr(hit, 'evalue', None)
                     if (evalue_threshold is None) or (ev is not None and ev < evalue_threshold):
+                        total_rows +=1 
                         rows.append((
                             qid,
                             getattr(hit, 'id', None),
@@ -119,14 +125,16 @@ class VPF_parser:
                             getattr(hit, 'cluster_num', None),
                             float(ev) if ev is not None else None
                         ))
-        return rows
+                    elif (evalue_threshold is not None) and (ev >= evalue_threshold):
+                        total_rows += 1
+        return rows, total_rows
     
 
     def parse_multiple_hmm_parallel(
     self,
-    unique_hit: bool = False,                   # reservado por si lo usas más adelante
+    unique_hit: bool = False,                   # reservado por si más adelante
     hmm_output_folder: Optional[str] = None,
-    num_cpus: Optional[int] = None
+    num_cpus: Optional[int] = None,
     ):
         """
         Versión paralela de parse_multiple_hmm que genera EXACTAMENTE el mismo
@@ -168,7 +176,9 @@ class VPF_parser:
             )
 
         # Flatten de todas las filas
-        all_rows = list(chain.from_iterable(results))
+        row_list, total_counts = zip(*results)
+        all_rows = list(chain.from_iterable(row_list))
+        total_before = sum(total_counts)
 
         # Construimos el DataFrame con el mismo esquema que el método original
         self.df_hmm = pd.DataFrame.from_records(all_rows, columns=columns)
@@ -176,9 +186,8 @@ class VPF_parser:
         # Nota: ya hemos filtrado por evalue en el worker. Si quieres mantener el
         # log informativo y asegurar igualdad semántica, re-aplicamos el filtro:
         if self.evalue is not None and len(self.df_hmm) > 0:
-            original = self.df_hmm.shape[0]
             self.df_hmm = self.df_hmm[self.df_hmm['evalue'] < self.evalue]
-            print(f"[INFO] Filtered HMM hits by e-value < {self.evalue}: {self.df_hmm.shape[0]} / {original} kept")
+            print(f"[INFO] Filtered HMM hits by e-value < {self.evalue}: {self.df_hmm.shape[0]} / {total_before} kept")
 
         # Resto del pipeline idéntico
         self._aggregate_by_virus()
@@ -245,7 +254,7 @@ class VPF_parser:
         vpf_dim = len(vpf_to_index)
         num_virus = len(self.df_virus_hmm)
 
-        sparse_matrix = lil_matrix((num_virus, vpf_dim), dtype=np.int32)
+        sparse_matrix = lil_matrix((num_virus, vpf_dim), dtype=np.float32)
 
         missing_vpfs = set()
 
@@ -262,6 +271,13 @@ class VPF_parser:
             print(f"[WARNING] {len(missing_vpfs)} VPFs found in hits not present in vpf_to_index")
 
         self.vpf_sparse_matrix = sparse_matrix.tocsr()
+        self.vpf_sparse_matrix_counts = self.vpf_sparse_matrix.copy()
+
+        if self.vector_norm in ("l1","l2"):
+            print("NORMALITZAM")
+            self.vpf_sparse_matrix = self._normalize_sparse_rows(self.vpf_sparse_matrix,
+                                                                        mode = self.vector_norm)
+        
         self.df_virus_hmm['hmms_conteos'] = [self.vpf_sparse_matrix.getrow(i) for i in range(num_virus)]
 
 
@@ -272,6 +288,29 @@ class VPF_parser:
         if not isinstance(sparse_matrix, csr_matrix):
             sparse_matrix = sparse_matrix.tocsr()
         return sparse_matrix
+    
+
+    def _normalize_sparse_rows(self, M: csr_matrix, mode: str = "l2") -> csr_matrix:
+        """Normaliza cada fila de M por su norma (L2 o L1). Las filas todo-cero quedan iguales."""
+        if not isinstance(M, csr_matrix):
+            M = M.tocsr()
+        n = M.shape[0]
+        if mode == "l2":
+            # norma L2 por fila
+            row_norms = np.sqrt(M.power(2).sum(axis=1)).A.ravel()
+        elif mode == "l1":
+            # norma L1 por fila
+            row_norms = np.asarray(M.sum(axis=1)).ravel()
+        else:
+            raise ValueError(f"Unknown norm mode: {mode}")
+        
+        print(row_norms)
+
+        # Evita división por 0: filas todo-cero se dejan tal cual
+        row_norms[row_norms == 0] = 1.0
+        inv = 1.0 / row_norms
+        return M.multiply(inv[:, None]).tocsr()
+
 
     def calculate_cosine_similarity(self, normalize=True):
         if not hasattr(self, 'vpf_sparse_matrix'):

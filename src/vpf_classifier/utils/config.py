@@ -60,7 +60,7 @@ class Files:
     FASTA = DATA_DIR / f"raw/ICTV_databases/Fastas/{ICTV_RELEASE}.fasta"
 
     # Prodigal output directory
-    PRODIGAL = DATA_DIR / f"raw/prodigal_output/{ICTV_RELEASE}"
+    PRODIGAL = DATA_DIR / f"raw/prodigal_gv_output/{ICTV_RELEASE}"
     FAA = PRODIGAL / f"{ICTV_RELEASE}.faa"
     GFF = PRODIGAL / f"{ICTV_RELEASE}.gff"
 
@@ -75,7 +75,7 @@ class Files:
     # HMM outputs
     HMM_OUTPUT = DATA_DIR / f"raw/output_hmm_join/{ICTV_RELEASE}"
     #HMM_OUTPUT_MULTIPLE = DATA_DIR / f"raw/hmm_output/{ICTV_RELEASE}"
-    HMM_OUTPUT_MULTIPLE = DATA_DIR / f"raw/hmm_output_V/{ICTV_RELEASE}"
+    HMM_OUTPUT_MULTIPLE = DATA_DIR / f"raw/hmmsearch3_ouput/{ICTV_RELEASE}"
 
     # Si queremos usar las vpfs antiguas
     # HMM_OUTPUT_MULTIPLE = DATA_DIR / f"raw/hmm_output_old/{ICTV_RELEASE}"
