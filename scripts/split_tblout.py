@@ -49,7 +49,7 @@ def split_tblout(tblout_path, n_parts=2, out_dir=None):
         end = (i + 1) * per_file if i < n_parts - 1 else total_blocks
         subset = list(chain.from_iterable(blocks[start:end]))
 
-        out_file = out_dir / f"{tblout_path.stem}_part{i+1}.tblout"
+        out_file = out_dir / f"{tblout_path.stem}_part{i+1}.tbl"
         with out_file.open("w") as f:
             f.writelines(header)
             f.writelines(subset)
