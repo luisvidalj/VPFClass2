@@ -38,6 +38,7 @@ class VPF_parser:
         e_value_threshold: Optional[float] = Constants.e_value_threshold,
         num_cpus: int = 20,
         # --- NUEVO ---
+        user: bool = False,
         vpf_dict_path: Optional[Path] = None,
         hmm_output_dir: Optional[Path] = None,
         vector_norm: Optional[str] = None, # l2, l1 or None
@@ -51,6 +52,8 @@ class VPF_parser:
         self._vpf_dict_path = vpf_dict_path
         self._hmm_output_dir = Path(hmm_output_dir) if hmm_output_dir is not None else Files.HMM_OUTPUT_MULTIPLE
         self._num_cpus = num_cpus
+        # User mod
+        self.user = user
         # Donam opcio a normalitzar
         self.vector_norm = vector_norm
 
@@ -99,7 +102,8 @@ class VPF_parser:
 
 
         self._aggregate_by_virus()
-        self._merge_taxonomy()
+        if self.user == False:
+            self._merge_taxonomy()
         # self._add_vpf_counts_sparse_optimized()
         self._add_vpf_counts_sparse_fixed()
         # print("[INFO] Aggregated VPF hit matrix available at .df_virus_hmm")
@@ -191,7 +195,8 @@ class VPF_parser:
 
         # Resto del pipeline idéntico
         self._aggregate_by_virus()
-        self._merge_taxonomy()
+        if self.user == False:
+            self._merge_taxonomy()
         self._add_vpf_counts_sparse_fixed()
 
 
@@ -210,6 +215,7 @@ class VPF_parser:
 
 
     def _merge_taxonomy(self):
+        print("Fail 1")
         ncbi_df = self.parser.parse_fasta_to_dataframe(return_df=True)
         self.df_virus_hmm = self.df_virus_hmm.merge(ncbi_df, on="Accession", how="left")
 

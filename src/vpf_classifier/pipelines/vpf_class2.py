@@ -381,6 +381,7 @@ def run_user_pipeline(
         hmm_file=str(hmm_models_p),                    # <-- importante
         e_value_threshold=float(e_value_threshold),
         num_cpus=int(num_cpus),
+        user = True,
         vpf_dict_path=Path(vpf_dict_p),                # <-- importante (evita el "hack" de _vpf_dict_path)
         hmm_output_dir=run_dirs.hmmer,                 # <-- importante: nuestros .tbl van a outdir/hmmer/
         vector_norm="l2"
@@ -427,10 +428,12 @@ def run_user_pipeline(
         sparse_mat = csr_matrix(sparse_mat)
 
     accessions = vpf.df_virus_hmm["Accession"].tolist()
-    print(f"DEL DF TENEMOS: {len(accessions)}")
+    print(accessions[1:5])
+    print(f"[INFO] Detected Accessions at .tbl files: {len(accessions)}")
     missing_acccessions = [acc for acc in full_accessions if acc not in accessions]
     vpf_to_index = getattr(vpf, "vpf_to_index", None)
     if vpf_to_index is None:
+        print("Here 1")
         # fallback: leer del json pasado por el usuario
         with open(vpf_dict_p, "r", encoding="utf-8") as f:
             vpf_to_index = json.load(f)
@@ -438,6 +441,7 @@ def run_user_pipeline(
     # 2) Guardados
     features_npz_path = run_dirs.features / "features_counts_sparse.npz"
     save_npz(features_npz_path, sparse_mat)
+    print(f"[INFO] Features saved")
 
     accessions_path = run_dirs.features / "accessions.txt"
     with open(accessions_path, "w", encoding="utf-8") as f:
@@ -450,9 +454,9 @@ def run_user_pipeline(
         json.dump(vpf_to_index, f, ensure_ascii=False, indent=2)
 
     # 3) Estadísticas
-    n_rows, n_cols = sparse_mat.shape
-    nnz = int(sparse_mat.nnz)
-    nonzero_fraction = float(nnz / (n_rows * n_cols)) if (n_rows and n_cols) else 0.0
+    #n_rows, n_cols = sparse_mat.shape
+    #nnz = int(sparse_mat.nnz)
+    #nonzero_fraction = float(nnz / (n_rows * n_cols)) if (n_rows and n_cols) else 0.0
     # features_stats = {
     #     "shape": [int(n_rows), int(n_cols)],
     #     "nnz": nnz,
