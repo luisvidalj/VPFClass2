@@ -427,6 +427,7 @@ def run_user_pipeline(
         sparse_mat = csr_matrix(sparse_mat)
 
     accessions = vpf.df_virus_hmm["Accession"].tolist()
+    print(f"DEL DF TENEMOS: {len(accessions)}")
     missing_acccessions = [acc for acc in full_accessions if acc not in accessions]
     vpf_to_index = getattr(vpf, "vpf_to_index", None)
     if vpf_to_index is None:
@@ -498,7 +499,9 @@ def run_user_pipeline(
     if not accessions_path.exists():
         raise FileNotFoundError(f"Expected accessions list at {accessions_path}")
     # la idea del codi d'abaix es recollir en una llista totes els accessions (un per linia al .txt)
-    accessions = [line.strip() for line in accessions_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    accessions2 = [line.strip() for line in accessions_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    print(f"Accessions abans de guardar: {len(accessions)}")
+    print(f"Accessions abans de guardar: {len(accessions2)}")
 
     # model_path = model_dir_p / "model.pt"
     in_features = int(X_csr.shape[1])
@@ -622,7 +625,7 @@ def run_user_pipeline(
             "[ERROR] Row mismatch: features rows != accessions .\n"
             f" - X_csr rows: {n_rows}\n"
             f" - accessions: {len(accessions)}\n"
-            "Asegurate de que el orden "
+            "Asegurate de que el orden es el que toca"
         )
     
     preds_df = pd.DataFrame({"Accession": accessions})
