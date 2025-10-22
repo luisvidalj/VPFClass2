@@ -10,7 +10,7 @@ class SparseNN(nn.Module):
     """
     def __init__(self,
                  input_size: int,
-                 hidden_dim: int = 2024,
+                 hidden_dim: int = 4048,
                  num_classes: int = 1000,
                  dropout: float = 0.3):
         super().__init__()
@@ -32,6 +32,50 @@ class SparseNN(nn.Module):
         x = self.dropout(x)
         return self.output_layer(x)
     
+
+class ProtoNN(nn.Module):
+    """
+    
+    """
+    
+    def __init__(self,
+                 input_size: int,
+                 hidden_dim: int = 2048,
+                 num_classes: int = 1000,
+                 dropout: float = 0.3,
+                 normalize_embeddigns: bool = True):
+        super().__init__()
+
+        self.fc1 = nn.Linear(input_size, hidden_dim, bias=False)
+        self.dropout = nn.Dropout(p=dropout)
+        self.prototypes = nn.Parameter(torch.randn(num_classes, hidden_dim))
+        self.normalize_embeddigns = normalize_embeddigns
+
+        # Optional: initialize prototypes with Xavier normal for stability
+        nn.init.xavier_normal_(self.prototypes)
+
+    def forward(self, x_sparse: torch.Tensor,
+                return_embedding: bool = False) -> torch.Tensor:
+        
+        x = torch.sparse.mm(x_sparse, self.fc1.weight.T)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        if self.normalize_embeddigns:
+            x = F.normalize(x, dim=1)
+            prototypes = F.normalize(self.prototypes, dim=1)
+        else:
+            prototypes = self.prototypes
+
+        if return_embedding:
+            return x
+        
+        dists = torch.cdist(x, prototypes, p=2)**2
+        logits = -dists
+        
+        return logits
+
+
 
 
 

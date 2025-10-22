@@ -215,7 +215,7 @@ class VPF_parser:
 
 
     def _merge_taxonomy(self):
-        print("Fail 1")
+        print("Si estas vegent aixo en execució d'usuari -> MALO")
         ncbi_df = self.parser.parse_fasta_to_dataframe(return_df=True)
         self.df_virus_hmm = self.df_virus_hmm.merge(ncbi_df, on="Accession", how="left")
 
