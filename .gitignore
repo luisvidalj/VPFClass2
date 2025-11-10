@@ -96,3 +96,7 @@ tool_data_v0.4.0.tar.zst
 
 # compressed files
 *.tar.zst
+
+
+# paper images
+/images/
