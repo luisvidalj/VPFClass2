@@ -143,6 +143,108 @@ def get_or_create_split(df: pd.DataFrame, msl_tag: str, test_size: float = 0.2, 
 
 
 
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import StratifiedShuffleSplit
+
+def stratified_split(
+    df: pd.DataFrame,
+    test_size: float = 0.2,
+    random_state: int = 42,
+    strategy: int = 1,
+    taxo_col: str = "Genus"
+):
+    """
+    Crea splits train/test para tres escenarios:
+      1) Estratificado SOLO con géneros con >=2 muestras (los de 1 muestra se excluyen del split).
+      2) Como (1), pero los géneros con 1 muestra van a TRAIN.
+      3) Como (1), pero los géneros con 1 muestra van a TEST (útiles para OSR).
+
+    Notas:
+    - Las filas con Genus NaN no se usan para estratificar; se añaden a TRAIN por defecto.
+    - Devuelve (train_df, test_df) con índices preservados del df original.
+
+    Parámetros:
+      df: DataFrame con columna 'Genus'
+      test_size: proporción de test para el estrato de géneros con >=2 muestras
+      strategy: 1 | 2 | 3 (ver descripción)
+      taxo_col: nombre de la columna de etiqueta
+
+    """
+    assert strategy in (1, 2, 3), "strategy debe ser 1, 2 o 3"
+
+    df = df.copy()
+
+    # Separar etiquetados vs no etiquetados
+    df_labeled = df[~df[taxo_col].isna()].copy()
+    df_unlabeled = df[df[taxo_col].isna()].copy()  # los mandaremos a train
+
+    # Contar por género
+    counts = df_labeled[taxo_col].value_counts()
+    singletons = counts[counts == 1].index
+    multis     = counts[counts >= 2].index
+
+    df_multi = df_labeled[df_labeled[taxo_col].isin(multis)].copy()
+    df_single = df_labeled[df_labeled[taxo_col].isin(singletons)].copy()
+
+    # Stratified split en el subconjunto con >=2
+    if len(df_multi) > 0:
+        sss = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=random_state)
+        idx = np.arange(len(df_multi))
+        y = df_multi[taxo_col].values
+        train_idx, test_idx = next(sss.split(idx, y))
+        multi_train = df_multi.iloc[train_idx]
+        multi_test  = df_multi.iloc[test_idx]
+    else:
+        # Raro, pero por si acaso
+        multi_train = df_multi.iloc[:0]
+        multi_test  = df_multi.iloc[:0]
+
+    # Reubicar singletons según estrategia
+    if strategy == 1:
+        # Se excluyen del split (no van ni a train ni a test)
+        single_train = df_single.iloc[:0]
+        single_test  = df_single.iloc[:0]
+    elif strategy == 2:
+        # Todos los singletons a TRAIN
+        single_train = df_single
+        single_test  = df_single.iloc[:0]
+    else:  # strategy == 3
+        # Todos los singletons a TEST (para evaluar OSR)
+        single_train = df_single.iloc[:0]
+        single_test  = df_single
+
+    # Añadir no etiquetados a TRAIN (opción conservadora)
+    train_df = pd.concat([multi_train, single_train, df_unlabeled], axis=0).sort_index()
+    test_df  = pd.concat([multi_test,  single_test], axis=0).sort_index()
+
+    # Info útil
+    def summary(name, d):
+        total = len(d)
+        uniq = d[taxo_col].dropna().nunique()
+        singles = (d[taxo_col].value_counts() == 1).sum()
+        print(f"{name}: N={total}, géneros distintos (etiquetados)={uniq}, singletons={singles}")
+    print("=== Resumen del split ===")
+    print(f"Estrategia: {strategy}")
+    print(f"Singletons totales: {len(df_single)}")
+    summary("TRAIN", train_df)
+    summary("TEST ", test_df)
+
+    # Comprobar intersección de géneros entre train/test (solo etiquetados)
+    train_g = set(train_df[taxo_col].dropna().unique())
+    test_g  = set(test_df[taxo_col].dropna().unique())
+    inter   = train_g.intersection(test_g)
+    print(f"Géneros en común entre TRAIN y TEST: {len(inter)}")
+
+    if strategy == 3:
+        # En 3, esperamos que los singletons estén sólo en TEST (no en TRAIN)
+        only_test_singletons = set(singletons) - train_g
+        print(f"Singletons ubicados exclusivamente en TEST: {len(only_test_singletons)}")
+
+    return train_df, test_df
+
+
+
 #################################################################################################################
 #################################################################################################################
                                      # Fuera del proyecto
@@ -168,4 +270,5 @@ def extract_fasta_subset(all_fasta_path: str, accession_file: str, output_fasta:
     print(f"[INFO] Selected {len(selected_records)} records from {all_fasta_path}")
     SeqIO.write(selected_records, output_fasta, "fasta")
     print(f"[INFO] Saved to {output_fasta}")
+
 
