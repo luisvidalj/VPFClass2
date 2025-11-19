@@ -44,13 +44,15 @@ BASE_URL="${BASE_URL:-https://bioinfo.uib.es/~recerca/vpfclass2}"
 
 if [[ "${SET}" == "virus" ]]; then
   PKG_NAME="models_virus_${MSL}.tar.zst"
+  PKG_PATH="models_virus"
   DEST_DIR="${TOOL_DATA_DIR}/virus_markers/models"
 else
   PKG_NAME="models_complete_${MSL}.tar.zst"
+  PKG_PATH="models_complete"
   DEST_DIR="${TOOL_DATA_DIR}/complete_markers/models"
 fi
 
-URL="${BASE_URL}/${PKG_NAME}"
+URL="${BASE_URL}/${PKG_PATH}/${PKG_NAME}"
 
 # Si ya existe la carpeta de destino para ese MSL, salta
 if [[ -d "${DEST_DIR}/${MSL}" ]]; then

@@ -87,6 +87,40 @@ class Files:
     # ICTV taxonomic CSV file (opcional si tienes uno por release)
     ML = DATA_DIR / f'raw/ICTV_databases/MSLs/{ICTV_RELEASE}.csv'
 
+# ### SOLO PARA COMPARACION VIEJA 25K: ####
+# class Files:
+#     ICTV_RELEASE = ICTV_RELEASE
+#     DATA_DIR = DATA_DIR
+
+#     # (GenBank) FASTA file
+#     FASTA = DATA_DIR / f"raw/ICTV_databases/Fastas/{ICTV_RELEASE}.fasta"
+
+#     # Prodigal output directory
+#     PRODIGAL = DATA_DIR / f"raw/prodigal_gv_output/{ICTV_RELEASE}"
+#     FAA = PRODIGAL / f"{ICTV_RELEASE}.faa"
+#     GFF = PRODIGAL / f"{ICTV_RELEASE}.gff"
+
+#     # HMM Models (genomad hmm models)
+
+#     HMM_MODELS = Path("/home/uib/proyectos/VPFTaxoClass/data/raw/hmm_25k/vpf_data/final_list.hmms")
+#     HMM_DICT = Path("/home/uib/proyectos/VPFTaxoClass/data/raw/hmm_25k/vpf_data/vpf_to_index_25k.json")
+#     #HMM_MODELS = DATA_DIR / "vpf_models/profiles_virus.hmms"
+#     #HMM_DICT = DATA_DIR / "vpf_models/vpf_to_index_V.json"
+
+
+#     # HMM outputs
+#     #HMM_OUTPUT = DATA_DIR / f"raw/output_hmm_join/{ICTV_RELEASE}"
+#     #HMM_OUTPUT_MULTIPLE = DATA_DIR / f"raw/hmm_output/{ICTV_RELEASE}"
+#     HMM_OUTPUT_MULTIPLE = DATA_DIR / f"raw/hmm_25k/output/"
+
+#     # Si queremos usar las vpfs antiguas
+#     # HMM_OUTPUT_MULTIPLE = DATA_DIR / f"raw/hmm_output_old/{ICTV_RELEASE}"
+
+#     HMM_TBL = HMM_OUTPUT_MULTIPLE  # Ruta donde buscará archivos .tbl
+    
+
+#     # ICTV taxonomic CSV file (opcional si tienes uno por release)
+#     ML = DATA_DIR / f'raw/ICTV_databases/MSLs/{ICTV_RELEASE}.csv'
 
 
 class Constants:

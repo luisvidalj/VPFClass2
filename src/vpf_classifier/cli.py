@@ -190,8 +190,8 @@ def main():
     
     pred.add_argument("--markers", choices=["all","virus"], default="virus",
                       help="Choose 'all' to use the 227k profile markers or 'virus' to use the viral specific ones. Default 'all'")
-    pred.add_argument("--msl", choices=["40", "39", "37", "35"], default="40",
-                  help="MSL Release the model has been trained with. Availables: 40,39,37,35")
+    pred.add_argument("--msl", choices=["40", "39", "38", "37", "36", "35", "34", "33", "32", "31"], default="40",
+                  help="MSL Release the model has been trained with. Availables: 40,39,38,37,36,35,34,33,32,31")
     pred.add_argument("--tool-data", default=None,
                   help="Root of the data bundle (if not trying to allocate at 'tool_data/').")
     
