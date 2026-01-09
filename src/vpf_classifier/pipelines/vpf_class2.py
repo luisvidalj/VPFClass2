@@ -643,6 +643,7 @@ def run_user_pipeline(
     RANKS = ["Realm","Subrealm","Kingdom","Subkingdom","Phylum","Subphylum",
             "Class","Subclass","Order","Suborder","Family","Subfamily","Genus","Subgenus","Species"]
 
+
     def apply_lineage_and_tidy(
         preds_df: pd.DataFrame,
         model_dir_p: Path,  # .../tool_data/<base>/models/MSLxx
@@ -752,6 +753,12 @@ def run_user_pipeline(
         # Mantén también cualquier otra columna que hubiera (por si añadiste extras)
         rest = [c for c in df.columns if c not in order]
         df = df[order + rest]
+
+        # 6) Cambiar la prediccion de familia si el score lo requiere
+        genus_to_family = {genus: data.get("Family") for genus, data in lineage_by_genus.items()}
+        mask = df["score_genus"] > df["score_family"]
+        df.loc[mask, "pred_family"] = df.loc[mask, "pred_genus"].map(genus_to_family)
+        df.loc[mask, "score_family"] = df.loc[mask, "score_genus"]
 
         return df
 

@@ -67,7 +67,7 @@ def merge_vpf_with_ictv(vpf_database: pd.DataFrame, ictv_df: pd.DataFrame, out_o
         'Class', 'Subclass', 'Order', 'Suborder', 'Family', 'Subfamily',
         'Genus', 'Subgenus', 'Species'
     ]
-    other_cols = ['base_accession', 'Genome', 'Genome composition', 'Host source']
+    other_cols = ['Isolate Sort','base_accession', 'Genome', 'Genome composition', 'Host source']
     cols_to_keep = taxonomy_cols + other_cols
     df_ictv_expanded = df_ictv_expanded[[col for col in cols_to_keep if col in df_ictv_expanded.columns]]
     # vpf_database = vpf_database[[col for col in cols_to_keep if col in vpf_database.columns]]
