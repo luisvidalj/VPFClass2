@@ -757,7 +757,7 @@ def run_user_pipeline(
         # 6) Cambiar la prediccion de familia si el score lo requiere
         genus_to_family = {genus: data.get("Family") for genus, data in lineage_by_genus.items()}
         mask = df["score_genus"] > df["score_family"]
-        df.loc[mask, "pred_family"] = df.loc[mask, "pred_genus"].map(genus_to_family)
+        df.loc[mask, "pred_family"] = df.loc[mask, "pred_genus"].map(genus_to_family).fillna("Unknown")
         df.loc[mask, "score_family"] = df.loc[mask, "score_genus"]
 
         return df
@@ -803,14 +803,7 @@ def run_user_pipeline(
 
 
 
-    
 
-
-
-
-
-# FALTA AÑADIR LA CLI Y ACLARAR SI LAS RUTAS FUNCIONAN. UNA VEZ FUNCIONEN, HAY QUE VER COMO SUBIR LAS COSAS Y SIMULAR UN EJERCICIO
-# DE USUARIO REAL
 
 
 
