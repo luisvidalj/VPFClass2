@@ -420,7 +420,7 @@ def run_user_pipeline(
     
 # ========= 5: Features Building (VPF counts aggregated by Virus) =======
     print("--------------------------------------------------------------------")
-    print("[PIPELINE] 4/5 - Building features (counts per VPF)…")
+    print("[PIPELINE] 4/5 - Building features (normalized counts per VPF)…")
 
     # 1) Matriz dispersa CSR fija construida por VPF_parser
     sparse_mat = vpf.get_sparse_matrix_from_dataframe()  # csr_matrix
@@ -428,12 +428,12 @@ def run_user_pipeline(
         sparse_mat = csr_matrix(sparse_mat)
 
     accessions = vpf.df_virus_hmm["Accession"].tolist()
-    print(accessions[1:5])
+    # print(accessions[1:5])
     print(f"[INFO] Detected Accessions at .tbl files: {len(accessions)}")
     missing_acccessions = [acc for acc in full_accessions if acc not in accessions]
     vpf_to_index = getattr(vpf, "vpf_to_index", None)
     if vpf_to_index is None:
-        print("Here 1")
+        print("vpf_to_index is not available. Fallback to vpf_dict_p")
         # fallback: leer del json pasado por el usuario
         with open(vpf_dict_p, "r", encoding="utf-8") as f:
             vpf_to_index = json.load(f)
@@ -504,8 +504,8 @@ def run_user_pipeline(
         raise FileNotFoundError(f"Expected accessions list at {accessions_path}")
     # la idea del codi d'abaix es recollir en una llista totes els accessions (un per linia al .txt)
     accessions2 = [line.strip() for line in accessions_path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    print(f"Accessions abans de guardar: {len(accessions)}")
-    print(f"Accessions abans de guardar: {len(accessions2)}")
+    # print(f"Accessions abans de guardar: {len(accessions)}")
+    # print(f"Accessions abans de guardar: {len(accessions2)}")
 
     # model_path = model_dir_p / "model.pt"
     in_features = int(X_csr.shape[1])
@@ -639,7 +639,6 @@ def run_user_pipeline(
         preds_df = pd.concat([preds_df, df_task], axis=1)
 
 
-    # Orden de rangos con Mayúsculas (como en tu lineage.json)
     RANKS = ["Realm","Subrealm","Kingdom","Subkingdom","Phylum","Subphylum",
             "Class","Subclass","Order","Suborder","Family","Subfamily","Genus","Subgenus","Species"]
 
@@ -756,6 +755,35 @@ def run_user_pipeline(
 
         # 6) Cambiar la prediccion de familia si el score lo requiere
         genus_to_family = {genus: data.get("Family") for genus, data in lineage_by_genus.items()}
+
+        ############################## Bloque para revisar ################################################
+        # --- 6A) Lift family prediction from genus when genus score > 0.3 ---
+        thr = 0.3
+
+        # Detect "Unknown" family
+        fam_is_unknown = (
+            df["pred_family"].isna()
+            | (df["pred_family"].astype(str).str.strip() == "")
+            | (df["pred_family"].astype(str) == "Unknown")
+        )
+
+        # Candidate family inferred from genus
+        inferred_family = df["pred_genus"].map(genus_to_family).fillna("Unknown")
+
+        # Condition to apply lifting
+        mask_lift = fam_is_unknown & (pd.to_numeric(df["score_genus"], errors="coerce") > thr)
+
+        # Count only real changes (Unknown -> non-Unknown)
+        real_change_mask = mask_lift & (inferred_family != "Unknown")
+        n_changed = int(real_change_mask.sum())
+
+        # Print visible flag (always prints, even if 0)
+        print(f"[INFO] Family override from genus (score_genus > {thr}): {n_changed} sequences updated.")
+
+        # Apply replacement
+        df.loc[mask_lift, "pred_family"] = inferred_family.loc[mask_lift]
+###############################################################################################################
+
         mask = df["score_genus"] > df["score_family"]
         df.loc[mask, "pred_family"] = df.loc[mask, "pred_genus"].map(genus_to_family).fillna("Unknown")
         df.loc[mask, "score_family"] = df.loc[mask, "score_genus"]

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Uso: ./run_hmm_parallel.sh PROT_FAA HMMS_FILE OUT_DIR NUM_CPUS
+# Uso: ./run_hmm_parallel2.sh PROT_FAA HMMS_FILE OUT_DIR NUM_CPUS
 
 # 1) Parámetros
 PROT_FAA=${1:-}     # archivo .faa con proteínas predichas
@@ -11,7 +11,7 @@ NUM_CPUS=${4:-}     # número total de CPUs disponibles (ej. 20)
 
 # 2) Verificaciones básicas
 if [[ -z "$PROT_FAA" || -z "$HMMS_FILE" || -z "$OUT_DIR" || -z "$NUM_CPUS" ]]; then
-  echo "[ERROR] Uso: $0 PROT_FAA HMMS_FILE OUT_DIR NUM_CPUS" >&2
+  echo "[ERROR] Usage: $0 PROT_FAA HMMS_FILE OUT_DIR NUM_CPUS" >&2
   exit 1
 fi
 

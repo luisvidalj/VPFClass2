@@ -280,7 +280,7 @@ class VPF_parser:
         self.vpf_sparse_matrix_counts = self.vpf_sparse_matrix.copy()
 
         if self.vector_norm in ("l1","l2"):
-            print("NORMALITZAM")
+            # print("NORMALITZAM")
             self.vpf_sparse_matrix = self._normalize_sparse_rows(self.vpf_sparse_matrix,
                                                                         mode = self.vector_norm)
         
@@ -310,7 +310,7 @@ class VPF_parser:
         else:
             raise ValueError(f"Unknown norm mode: {mode}")
         
-        print(row_norms)
+        # print(row_norms)
 
         # Evita división por 0: filas todo-cero se dejan tal cual
         row_norms[row_norms == 0] = 1.0
