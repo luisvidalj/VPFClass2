@@ -153,7 +153,7 @@ PY
   echo "[INFO] Installing VPF-Class 2 in editable mode…"
   # -q for quiet; remove -q for more logs
   if python -m pip install -q -e .; then
-    echo "[OK] Editable installation completed."
+    echo "[OK] Installation completed."
   else
     echo "[ERROR] 'pip install -e .' failed. Make sure your conda env is ACTIVE and you have write permissions."
     exit 1
