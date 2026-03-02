@@ -193,5 +193,5 @@ verify_basic_layout
 cd "${REPO_ROOT}"
 echo "[DONE] tool_data is ready. Returning to ${REPO_ROOT}"
 
-#install_editable_pkg
-install_pkg
+install_editable_pkg
+#install_pkg
