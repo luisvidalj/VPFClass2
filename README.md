@@ -1,6 +1,6 @@
 # VPF-Class 2
 
-**VPF-Class 2** VPF-Class2 is a hybrid tool combining reference alignment and machine learning for viral taxonomic classification. It takes raw viral sequences as input, predicts protein-coding genes, identifies marker protein families through HMMER searches, and uses a neural network to assign taxonomic labels down to the genus level. The tool is designed to be modular, reproducible, and easy to use both for benchmarking against ICTV releases and for real-world applications where users submit novel viral contigs for classification.
+**VPF-Class 2** is a hybrid tool combining reference alignment and machine learning for viral taxonomic classification. It takes raw viral sequences as input, predicts protein-coding genes, identifies marker protein families through HMMER searches, and uses a neural network to assign taxonomic labels down to the genus level. The tool is designed to be modular, reproducible, and easy to use both for benchmarking against ICTV releases and for real-world applications where users submit novel viral contigs for classification.
 
 
 ## 1 - Setup and environment installation
@@ -8,24 +8,24 @@ Clone the repository and move into:
 
 ```bash
 git clone https://github.com/luisvidalj/VPFClass2.git
-git clone https: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//@github.com/luisvidalj/VPFClass2.git
 cd VPFClass2
 ```
 
-Dependencies installation is guided via Conda, which you will need to have installed. Select either option depending on whether your device has a GPU.
+Dependencies installation is guided via Conda, which you will need to have installed (). **Select either option depending on whether your device has a GPU**. 
 
 ```bash
 # For CPU-only systems
 conda env create -f environment_cpu.yml
 conda activate vpfclass
-
+```
+```bash
 # For GPU-enabled systems
 conda env create -f environment_gpu.yml
 conda activate vpfclass-gpu
 ``` 
 ### Marker profiles selection
 
-Before downloading the data, choose which marker profiles you want to use:
+Before downloading the data, **choose which marker profiles you want to use**:
 
 - **Virus markers** → smaller dataset (~17 GB), only includes profiles associated with viruses (**recommended**, see [paper reference] for details).  
 - **Complete markers** → larger dataset (~30 GB), includes all GeNomad profiles (viruses, plasmids, chromosomes).
@@ -34,16 +34,33 @@ Before downloading the data, choose which marker profiles you want to use:
 ```bash
 # Viral markers setup
 bash scripts/setup_tool_data.sh virus
-
+```
+```bash
 # Complete markers setup
 bash scripts/setup_tool_data.sh all
 ```
+A directory named `tool_data/` will be created in the project root.  
+This folder contains all external resources required to run VPF-Class 2.
 
 > **Note:** If one dataset has already been installed, the other can also be added later — however, note that the total storage required will be approximately 60 GB.
 
+### ICTV Release Selection
 
+VPF-Class 2 allows users to reproduce classifications under different ICTV Master Species List (MSL) releases.  
+Each model has been trained on a specific ICTV release (e.g., MSL33, MSL35, MSL38, MSL40), enabling benchmarking against historical taxonomy versions or reproducing previously published results.
 
-## Usage
+By default, the tool expects that the trained model corresponding to the selected `--msl` release is available inside your `tool_data` directory.
+
+If you wish to use a different ICTV release than the one currently installed, you must download the corresponding trained model.
+
+From the root of the repository, run:
+
+```bash
+bash scripts/get_msl_models.sh {virus|complete} MSLxx
+```
+
+This will download the trained model and associated metadata for that specific ICVT releseas and place them in the appropriate location within `tool_data`.
+## 2 - Usage
 
 VPF-Class 2 provides two main commands: `check` and `predict`.
 
@@ -61,12 +78,12 @@ Where
   - `virus`: only use profiles associated with viruses.  
   - `all`: use all profiles from GeNomad (viruses, plasmids, chromosomes).  
 
-- `--msl {40,39,38,35,33}`: specify the ICTV MSL release for which the model was trained (this allows reproducing classifications as if using older releases). 
+- `--msl {40,39,38,37,36,35,34,33,32,31}`: specify the ICTV MSL release for which the model was trained (this allows reproducing classifications as if using older releases). 
 
 ### Run predictions
 
 ```bash
-vpfclass2 predict --fasta test/mini_test.fna --outdir toy_example/readme --markers virus --msl 40
+vpfclass2 predict --fasta toy_example/mini_test.fna --outdir toy_example/output/ --markers virus --msl 40
 ``` 
 
 Where the arguments:
