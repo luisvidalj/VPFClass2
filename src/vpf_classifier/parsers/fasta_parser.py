@@ -17,7 +17,6 @@ class FastaParser:
         if fna_path is not None:
             self.fna_path = fna_path
         else:
-            print("ME CAGO EN MI SANTA VIDA")
             self.fna_path = Files.FASTA
         self.faa = None
         self.ncbi_df = None
