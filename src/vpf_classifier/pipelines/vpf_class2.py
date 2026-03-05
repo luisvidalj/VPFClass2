@@ -255,14 +255,14 @@ def run_user_pipeline(
 
     meta.update({
         "stage": "prodigal_done",
-        "n_proteins": int(len(df_proteins)),
+        "n_proteins": int(len(prodigal.df_prots)) if prodigal.df_prots is not None else None,
         "prodigal_outputs": prodigal_files,
         #"prodigal_proteins_csv": str(proteins_csv),
     })
     (outdir_p / "run_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
 
-    # ========= HMMER (Bloque 4) ==========================================
+    # ========= HMMER ===========================================================
     print("--------------------------------------------------------------------")
     print(f"[PIPELINE] 3/5 - HMMER + filtering (e_value ≤ {e_value_threshold})…")
 
@@ -272,18 +272,6 @@ def run_user_pipeline(
     if not hmm_models_p.exists():
         raise FileNotFoundError(f"HMM profiles not found: {hmm_models_p}")
     
-    """
-    Aqui chatgpt sugiere que ejecute
-
-    fasta_parser.run_hmmer(
-        hmm_models=hmm_models_p,
-        output_dir=run_dirs.hmmer,
-        num_cpus=int(num_cpus)
-    )
-
-    Pero en teoria esto deberia parser con simplemente llamar a vpf.parse_multiple_hmm()
-    """
-
     # VPF_parser debería reutilizar .tbl si ya existen en run_dirs.hmmer
     vpf = VPF_parser(
         parser=fasta_parser,
