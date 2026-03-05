@@ -67,5 +67,6 @@ wait
 
 # 7) Reporte de duración
 DUR=$SECONDS
-printf "[INFO] Hmmsearch has finished (time: %02d:%02d:%02d\n)" $((DUR/3600)) $(((DUR%3600)/60)) $((DUR%60))
+printf "[INFO] Hmmsearch has finished (time: %02d:%02d:%02d)\n" \
+  $((DUR/3600)) $(((DUR%3600)/60)) $((DUR%60))
 

@@ -147,8 +147,20 @@ BEGIN { seq=0; fileidx=1 }
 # Remove empty shards just in case
 find "$SHARDS_DIR" -type f -name 'shard_*.fna' -size 0 -delete || true
 
-# Shard list
-mapfile -t SHARDS < <(LC_ALL=C ls -1 "$SHARDS_DIR"/shard_*.fna 2>/dev/null || true)
+# # Shard list (NO COMPATIBLE WITH BASH 3.2)
+# mapfile -t SHARDS < <(LC_ALL=C ls -1 "$SHARDS_DIR"/shard_*.fna 2>/dev/null || true)
+# N_SHARDS="${#SHARDS[@]}"
+# if [[ "$N_SHARDS" -eq 0 ]]; then
+#   echo "[ERROR] No shards were generated." >&2
+#   exit 1
+# fi
+
+# Shard list (bash 3.2 compatible)
+SHARDS=()
+while IFS= read -r line; do
+  [[ -n "$line" ]] && SHARDS+=("$line")
+done < <(LC_ALL=C ls -1 "$SHARDS_DIR"/shard_*.fna 2>/dev/null || true)
+
 N_SHARDS="${#SHARDS[@]}"
 if [[ "$N_SHARDS" -eq 0 ]]; then
   echo "[ERROR] No shards were generated." >&2
@@ -189,11 +201,23 @@ if command -v parallel >/dev/null 2>&1; then
   printf "%s\n" "${SHARDS[@]}" | parallel -j "$N_CPUS" --halt now,fail=1 run_one_shard {}
 else
   # Fallback to xargs -P (POSIX-ish)
-  printf "%s\0" "${SHARDS[@]}" | xargs -0 -n1 -P "$N_CPUS" bash -c 'run_one_shard "$0"'
+  printf "%s\0" "${SHARDS[@]}" | xargs -0 -n1 -P "$N_CPUS" bash -c 'run_one_shard "$1"' _ 
 fi
 
 # ========== Verify per-shard outputs ==========
-mapfile -t TAGGED < <(LC_ALL=C ls -1 "$SHARD_OUTS"/shard_*.tagged.faa 2>/dev/null || true)
+
+# mapfile -t TAGGED < <(LC_ALL=C ls -1 "$SHARD_OUTS"/shard_*.tagged.faa 2>/dev/null || true)
+# if [[ "${#TAGGED[@]}" -ne "$N_SHARDS" ]]; then
+#   echo "[ERROR] Number of .tagged.faa files (${#TAGGED[@]}) != number of shards ($N_SHARDS). Check logs in $LOGS_DIR" >&2
+#   exit 1
+# fi
+
+# Verify per-shard outputs (bash 3.2 compatible)
+TAGGED=()
+while IFS= read -r line; do
+  [[ -n "$line" ]] && TAGGED+=("$line")
+done < <(LC_ALL=C ls -1 "$SHARD_OUTS"/shard_*.tagged.faa 2>/dev/null || true)
+
 if [[ "${#TAGGED[@]}" -ne "$N_SHARDS" ]]; then
   echo "[ERROR] Number of .tagged.faa files (${#TAGGED[@]}) != number of shards ($N_SHARDS). Check logs in $LOGS_DIR" >&2
   exit 1
