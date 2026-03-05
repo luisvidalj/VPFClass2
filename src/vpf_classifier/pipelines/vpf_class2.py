@@ -1,26 +1,22 @@
 from __future__ import annotations
 
-from pathlib import Path
-import time
-import shutil
 import json
+import shutil
+import sys
+import time
+from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 import torch
 import torch.nn.functional as F
-import numpy as np
-import sys
-import argparse
-
-from scipy.sparse import load_npz, csr_matrix, issparse
-from dataclasses import dataclass
-from scipy.sparse import save_npz, csr_matrix, issparse
+from scipy.sparse import csr_matrix, issparse, load_npz, save_npz
 
 from vpf_classifier.parsers.fasta_parser import FastaParser
 from vpf_classifier.parsers.prodigal_parser import Prodigal
 from vpf_classifier.parsers.vpf_parser import VPF_parser
-
-import pandas as pd
-
-
+from vpf_classifier.utils.config import ROOT_DIR
 
 ##### --------------------------- Helpers --------------------------------------------------
 
@@ -59,53 +55,23 @@ def _scipy_csr_to_torch_coo_batch(X_csr_batch: csr_matrix, device:str = "cpu") -
     return sp
 
 
-def _load_lineage_by_genus(model_dir_p: Path) -> dict:
-    """
-    Load tool_data/MSL_labelling/MSLXX/lineage.json
-    """
+# def _load_lineage_by_genus(model_dir_p: Path) -> dict:
+#     """
+#     Load tool_data/MSL_labelling/MSLXX/lineage.json
+#     """
 
-    # model_dir_p = tool_data/<base>/models/MSLXX
-    try:
-        msl_tag = model_dir_p.name 
-        tool_data_root = model_dir_p.parents[3] #.../tool_data
-    except Exception:
-        return {}
+#     # model_dir_p = tool_data/<base>/models/MSLXX
+#     try:
+#         msl_tag = model_dir_p.name 
+#         tool_data_root = model_dir_p.parents[3] #.../tool_data
+#     except Exception:
+#         return {}
     
-    lineage_path = tool_data_root / "MSL_labelling" / msl_tag / "lineage.json"
-    print(f"Just in case {tool_data_root}")
-    if lineage_path.exists():
-        return json.loads(lineage_path.read_text(encoding="utf-8"))
-    return {}
-
-
-
-# def _predict_in_batches(
-#         model: torch.nn.Module,
-#         X_csr: csr_matrix,
-#         idx_to_label: list[str],
-#         device: str = "cpu",
-#         batch_size: int = 1024,
-#         topk: int = 3,
-# ) -> list[dict]:
-#     """
-#     Function to infer predictions from the pre-loaded model.
-#     """
-#     # per com esta construit el codi no tocaria mai trobar aquest error
-#     assert issparse(X_csr), "Error when calling _predict_in_batches due to not sparse X_Csr" # aixo amollara un error si no es compleix la condició
-#     n = X_csr.shape[0]
-#     records: list[dict] = []
-#     k = min(topk, len(idx_to_label))
-
-#     model.eval()
-#     model.to(device)
-
-#     with torch.no_grad():
-#         for start in range(0,n, batch_size):
-#             end = min(start + batch_size, n)
-
-
-
-# ## Meter a partir de predict_ in batches
+#     lineage_path = tool_data_root / "MSL_labelling" / msl_tag / "lineage.json"
+#     print(f"Just in case {tool_data_root}")
+#     if lineage_path.exists():
+#         return json.loads(lineage_path.read_text(encoding="utf-8"))
+#     return {}
 
 
 
@@ -138,39 +104,7 @@ def _make_run_dirs(outdir_p: Path) -> RunDirs:
     return rd
 
 
-import sys
-from pathlib import Path
-from typing import Optional
-
-def _ensure_sparse_genus_on_path(model_dir_p: Path) -> None:
-    """
-    Inserta '.../models' en sys.path si existe '.../models/sparse_genus',
-    para que 'import sparse_genus' funcione al hacer torch.load(model).
-    """
-    try:
-        # Caso típico: model_dir_p = repo/models/complete_markers/MSL40
-        models_root = model_dir_p.parents[3]
-        models_root = Path(models_root) / "models"
-        if (models_root / "sparse_genus").exists():
-            path_str = str(models_root.resolve())
-            if path_str not in sys.path:
-                sys.path.insert(0, path_str)
-                print(f"[DEBUG] Added to sys.path: {path_str}")
-    except Exception:
-        # Fallback: buscar subiendo desde CWD
-        cwd = Path.cwd()
-        for r in [cwd] + list(cwd.parents):
-            cand = r / "models" / "sparse_genus"
-            if cand.exists():
-                path_str = str((r / "models").resolve())
-                if path_str not in sys.path:
-                    sys.path.insert(0, path_str)
-                    # print(f"[DEBUG] Added to sys.path: {path_str}")
-                break
-
-
 from vpf_classifier.utils.config import ROOT_DIR
-import sys
 
 _MODELS_CODE_ADDED = False
 
@@ -188,21 +122,9 @@ def _ensure_models_code_on_path_once() -> None:
     path_str = str(models_dir)
 
     if models_dir.exists() and path_str not in sys.path:
-        sys.path.insert(0,path_str) # insert es como append pero donde quieras. Igual funcionaria con append
+        sys.path.insert(0,path_str)
     _MODELS_CODE_ADDED = True
 
-
-def _ensure_sparse_task_on_path(model_dir_p: Path, module_dir_names: str) -> None:
-
-
-    def _add_models_path(models_dir: Path) -> None:
-        path_str = str(models_dir.resolve())
-        if path_str not in sys.path:
-            sys.path.insert(0, path_str)
-
-    def _find_models_root_upwards(start:Path) -> Optional[Path]:
-        
-        pass
 
 
 
@@ -223,7 +145,7 @@ def run_user_pipeline(
     # ========= SETUP ========================================
 
     # 1) Input Validation
-    if fasta is None:
+    if not fasta:
         raise ValueError("You must provide --fasta")
     if model_dir is None:
         raise ValueError("Models directory not found")
@@ -240,17 +162,14 @@ def run_user_pipeline(
         outdir_p = Path(outdir).expanduser().resolve()
     outdir_p.mkdir(parents=True, exist_ok=True)
 
-    # subcarpetas por run
     run_dirs = _make_run_dirs(outdir_p)
-    print(f"MODEL DIR: {model_dir_p}")
+    # print(f"MODEL DIR: {model_dir_p}")
 
     # 2) Existence checks
     if not fasta_p.exists():
         raise FileNotFoundError(f"FASTA not found: {fasta_p}")
     if not model_dir_p.exists():
         raise FileNotFoundError(f"Model bundle dir not found: {model_dir_p}")
-    if not (model_dir_p).exists():
-        raise FileNotFoundError(f"Missing model directories in {model_dir_p}")
     if not vpf_dict_p.exists():
         raise FileNotFoundError(f"vpf_to_index JSON not found: {vpf_dict_p}")
 
@@ -266,18 +185,16 @@ def run_user_pipeline(
     print(f"[SETUP] e-value thr.: {e_value_threshold}")
     print(f"[SETUP] num_cpus:     {num_cpus}")
     print(f"[SETUP] device:       {device}")
-    print(f"[SETUP] prodigal-gv:     {prodigal_path or 'NOT FOUND'}")
+    print(f"[SETUP] prodigal-gv:  {prodigal_path or 'NOT FOUND'}")
     print(f"[SETUP] hmmsearch:    {hmmsearch_path or 'NOT FOUND'}")
     print(f"[SETUP] Generating subdirs:")
-    #print(f"    - fasta:     {run_dirs.fasta}")
     print(f"    - prodigal:  {run_dirs.prodigal}")
     print(f"    - hmmer:     {run_dirs.hmmer}")
-    #print(f"    - features:  {run_dirs.features}")
     print(f"    - preds:     {run_dirs.preds}")
     print("=====================================================================")
 
     if prodigal_path is None:
-        raise EnvironmentError("Prodigal not found. Make sure the conda environment is activated.")
+        raise EnvironmentError("prodigal-gv not found. Make sure the conda environment is activated.")
     if hmmsearch_path is None:
         raise EnvironmentError("hmmsearch not found. Make sure the conda environment is activated.")
 
@@ -303,26 +220,28 @@ def run_user_pipeline(
     }
     (outdir_p / "run_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
+
+
+
     print("--------------------------------------------------------------------")
     # ========= Fasta -> DataFrame ===========================================
     print("[PIPELINE] 1/5 - Parsing FASTA...")
-    fasta_parser = FastaParser(fna_path=str(fasta_p))
+    fasta_parser = FastaParser(fna_path=fasta_p)
     fasta_parser.parse_fasta_to_dataframe()
 
     full_accessions = fasta_parser.ncbi_df['Accession'].tolist()
 
-    # Guardar cabeceras en subcarpeta FASTA
-    # headers_csv = run_dirs.fasta / "fasta_headers.csv"
-    # _save_csv(fasta_parser.ncbi_df, headers_csv)
-    # print(f"[PIPELINE] FASTA parsed. Headers saved in: {headers_csv}")
-
     # Update metadata
+    n_sequences = int(len(fasta_parser.ncbi_df))
     meta.update({
         "stage": "fasta_parsed",
-        "n_sequences": int(len(getattr(fasta_parser, "ncbi_df", []))),
-        #"fasta_headers_csv": str(headers_csv),
+        "n_sequences": n_sequences,
     })
     (outdir_p / "run_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+
+
+
 
     # ======== Prodigal =========================================================
     print("--------------------------------------------------------------------")
@@ -806,7 +725,7 @@ def run_user_pipeline(
                 missing_df[col] = np.nan
 
         preds_df = pd.concat([preds_df, missing_df], ignore_index=True)
-        _save_csv(df=preds_df, path=preds_csv)
+    _save_csv(df=preds_df, path=preds_csv)
 
     print(f"[PIPELINE] Predictions stored in: {preds_csv}")
 

@@ -4,10 +4,8 @@ from Bio import SeqIO
 import pandas as pd
 from pathlib import Path
 import os
-import glob
 from vpf_classifier.utils.config import Files
 from vpf_classifier.utils.config import SCRIPTS_DIR
-from vpf_classifier.utils.config import DATA_DIR
 from typing import Optional
 import subprocess
 
@@ -17,6 +15,7 @@ class FastaParser:
         if fna_path is not None:
             self.fna_path = fna_path
         else:
+            # Only for development
             self.fna_path = Files.FASTA
         self.faa = None
         self.ncbi_df = None

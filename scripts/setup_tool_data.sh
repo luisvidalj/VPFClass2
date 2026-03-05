@@ -150,7 +150,7 @@ PY
     return 0
   fi
 
-  echo "[INFO] Installing VPF-Class 2 in editable mode…"
+  echo "[INFO] Installing VPF-Class 2"
   # -q for quiet; remove -q for more logs
   if python -m pip install -q -e .; then
     echo "[OK] Installation completed."
