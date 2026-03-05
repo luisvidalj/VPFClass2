@@ -1,8 +1,8 @@
 from Bio import SeqIO
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+# import numpy as np
+# import matplotlib.pyplot as plt
+# import seaborn as sns
 
 from vpf_classifier.parsers.fasta_parser import FastaParser
 
@@ -11,33 +11,8 @@ from pathlib import Path
 from vpf_classifier.utils.config import Files
 from pathlib import Path
 from typing import Optional
-import glob
 
 class Prodigal:
-    # def __init__(self, parser: FastaParser):
-    #     """
-    #     Wraps a FastaParser instance and processes predicted protein sequences from Prodigal output.
-    #     Will run Prodigal only if no .faa file is found in the expected directory.
-    #     """
-    #     self.parser = parser
-    #     faa_candidates = sorted(glob.glob(str(Files.PRODIGAL / "*.faa")))
-
-    #     if faa_candidates:
-    #         self.parser.run_prodigal()
-    #         self.output_faa = Path(faa_candidates[0])
-    #         if len(faa_candidates) > 1:
-    #             print(f"[WARNING] Multiple .faa files found in {Files.PRODIGAL}. Using: {self.output_faa.name}")
-    #         else:
-    #             print(f"[INFO] Using existing Prodigal .faa: {self.output_faa.name}")
-            
-    #     else:
-    #         print("[INFO] No .faa file found. Calling Prodigal...")
-    #         self.output_faa = self.parser.run_prodigal()
-
-    #     self.ncbi = self.parser.parse_fasta_to_dataframe(return_df=True)
-    #     self.df_prots = None
-    #     self.df_virus_prot = None
-
     def __init__(self, parser: FastaParser, output_dir: Optional[Path] = None):
         """
         Wraps a FastaParser instance and processes predicted protein sequences from Prodigal output.
