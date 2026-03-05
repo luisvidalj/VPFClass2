@@ -113,14 +113,14 @@ def main():
 
     chk = sub.add_parser("check", help="Validate environment and resources")
     chk.add_argument("--markers", choices=["all", "virus"], default="virus")
-    chk.add_argument("--msl", choices=["40", "39", "37", "35"], default="40")
+    chk.add_argument("--msl", choices=["40", "39", "38", "37", "36", "35", "34", "33", "32", "31"], default="40")
     chk.add_argument("--tool-data", default=None)
 
     args = p.parse_args()
 
     if args.cmd == "check":
         ok = True
-        print("[CHECK] Prodgial:", shutil.which("prodigal-gv") or "NOT FOUND"); ok &= bool(shutil.which("prodigal-gv"))
+        print("[CHECK] prodigal-gv:", shutil.which("prodigal-gv") or "NOT FOUND"); ok &= bool(shutil.which("prodigal-gv"))
         print("[CHECK] hmmsearch:", shutil.which("hmmsearch") or "NOT FOUND"); ok &= bool(shutil.which("hmmsearch"))
 
         md, vd, hm, td = _resolve_resources(

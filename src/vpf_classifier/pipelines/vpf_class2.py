@@ -240,23 +240,13 @@ def run_user_pipeline(
     (outdir_p / "run_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
 
-
-
-
     # ======== Prodigal =========================================================
     print("--------------------------------------------------------------------")
-    # (si en algún momento ofrecemos opción de cargar .faa directamente, aquí haríamos el bypass)
     print("[PIPELINE] 2/5 - Prodigal...")
     #fasta_parser.run_prodigal(output_dir=str(run_dirs.prodigal))
-    prodigal = Prodigal(parser=fasta_parser, output_dir=str(run_dirs.prodigal))  # <- ahora en subcarpeta
+    prodigal = Prodigal(parser=fasta_parser, output_dir=run_dirs.prodigal) 
     df_proteins = prodigal.parse_prodigal()
 
-    # Guardar resumen de proteínas en subcarpeta PROTEINS
-    # proteins_csv = run_dirs.prodigal / "prodigal_proteins.csv"
-    # _save_csv(df_proteins, proteins_csv)
-    # print(f"[PIPELINE] Prodigal completed. Summary of viral proteins: {proteins_csv}")
-
-    # Registrar salidas presentes (si no existen, listas vacías)
     prodigal_files = {
         "faa": [str(p.resolve()) for p in run_dirs.prodigal.glob("*.faa")],
         "gff": [str(p.resolve()) for p in run_dirs.prodigal.glob("*.gff")],
