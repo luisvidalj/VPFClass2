@@ -57,48 +57,89 @@ class Prodigal:
         # Placeholders
         self.df_prots = None
         self.df_virus_prot = None
-    
-    def parse_prodigal(self):
+
+
+    def parse_prodigal(self) -> pd.DataFrame:
         """
-        Parses the .faa file produced by Prodigal and returns a DataFrame aggregated by virus (accession).
+        Parse the .faa produced by Prodigal and return a virus-level DataFrame.
+
+        This implementation is robust to repeated protein IDs in the input .faa:
+        we store one row per protein record and aggregate later by contig accession.
         """
-        data = {}
-        for record in SeqIO.parse(self.output_faa, "fasta"):
-            header_parts = record.description.split('#')
-            seq_id = header_parts[0].strip()
+        rows = []
+
+        for record in SeqIO.parse(str(self.output_faa), "fasta"):
+            # Prodigal header format typically: "<protein_id> # <start> # <end> # <strand> # <extra>"
+            protein_id = record.description.split("#", 1)[0].strip()
             protein_seq = str(record.seq)
 
-            if seq_id not in data:
-                data[seq_id] = []
-            data[seq_id].append(protein_seq)
+            rows.append({
+                "Protein_accession": protein_id,
+                "Protein_sequence": protein_seq,
+                "Protein_length": len(protein_seq),
+            })
 
-        self.df_prots = pd.DataFrame([
-            {
-                "Protein_accession": seq_id,
-                "Genes": len(proteins),
-                "Proteins": str(*proteins),  # one protein per protein_accession assumption
-                "Length": len(str(proteins))
-            }
-            for seq_id, proteins in data.items()
-        ])
+        self.df_prots = pd.DataFrame(rows)
 
         self._aggregate_by_virus()
         self._merge_taxonomy()
 
         return self.df_virus_prot
     
-    def _aggregate_by_virus(self):
+    def _aggregate_by_virus(self) -> None:
         """
-        Aggregates the protein-level DataFrame into a virus-level DataFrame based on accession.
+        Aggregate protein-level rows into a virus/contig-level DataFrame.
         """
         aux_df = self.df_prots.copy()
         aux_df["Accession"] = aux_df["Protein_accession"].str.rsplit("_", n=1).str[0]
 
         self.df_virus_prot = aux_df.groupby("Accession").agg(
-            protein_sequences=("Proteins", list),
+            protein_sequences=("Protein_sequence", list),
             protein_accessions=("Protein_accession", list),
-            protein_lengths=("Proteins", lambda x: [len(seq) for seq in x])
+            protein_lengths=("Protein_length", list),
         ).reset_index()
+    
+    # def parse_prodigal(self):
+    #     """
+    #     Parses the .faa file produced by Prodigal and returns a DataFrame aggregated by virus (accession).
+    #     """
+    #     data = {}
+    #     for record in SeqIO.parse(self.output_faa, "fasta"):
+    #         header_parts = record.description.split('#')
+    #         seq_id = header_parts[0].strip()
+    #         protein_seq = str(record.seq)
+
+    #         if seq_id not in data:
+    #             data[seq_id] = []
+    #         data[seq_id].append(protein_seq)
+
+    #     self.df_prots = pd.DataFrame([
+    #         {
+    #             "Protein_accession": seq_id,
+    #             "Genes": len(proteins),
+    #             "Proteins": str(*proteins),  # one protein per protein_accession assumption
+    #             "Length": len(str(proteins))
+    #         }
+    #         for seq_id, proteins in data.items()
+    #     ])
+
+    #     self._aggregate_by_virus()
+    #     self._merge_taxonomy()
+
+    #     return self.df_virus_prot
+    
+    # def _aggregate_by_virus(self):
+    #     """
+    #     Aggregates the protein-level DataFrame into a virus-level DataFrame based on accession.
+    #     """
+    #     aux_df = self.df_prots.copy()
+    #     aux_df["Accession"] = aux_df["Protein_accession"].str.rsplit("_", n=1).str[0]
+
+    #     self.df_virus_prot = aux_df.groupby("Accession").agg(
+    #         protein_sequences=("Proteins", list),
+    #         protein_accessions=("Protein_accession", list),
+    #         protein_lengths=("Proteins", lambda x: [len(seq) for seq in x])
+    #     ).reset_index()
 
     def _merge_taxonomy(self):
         """
