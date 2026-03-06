@@ -1,6 +1,6 @@
 # VPF-Class 2
 
-**VPF-Class 2** is a hybrid tool combining reference alignment and machine learning for viral taxonomic classification. It takes raw viral sequences as input, predicts protein-coding genes, identifies marker protein families through HMMER searches, and uses a neural network to assign taxonomic labels down to the genus level. The tool is designed to be modular, reproducible, and easy to use both for benchmarking against ICTV releases and for real-world applications where users submit novel viral contigs for classification.
+**VPF-Class 2** is a hybrid tool combining reference alignment and machine learning for viral taxonomic classification. It takes raw viral sequences as input, predicts protein-coding genes, identifies marker protein families through HMMER searches, and uses a neural network to assign taxonomic labels down to the genus level. The tool is designed to be modular, reproducible, and easy to use both for benchmarking against ICTV releases and for real-world applications where users submit viral contigs for classification.
 
 
 ## 1 - Setup and environment installation
@@ -11,7 +11,7 @@ git clone https://github.com/luisvidalj/VPFClass2.git
 cd VPFClass2
 ```
 
-Dependencies installation is guided via Conda, which you will need to have installed (). **Select either option depending on whether your device has a GPU**. 
+Dependencies installation is guided via Conda, which you will need to have installed ([conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)). **Select either option depending on whether your device has a GPU**. 
 
 ```bash
 # For CPU-only systems
