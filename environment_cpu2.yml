@@ -1,0 +1,36 @@
+name: vpfclass
+channels:
+  - conda-forge
+  - bioconda
+  - pytorch
+dependencies:
+  - python=3.10
+  - pip
+
+  # Core scientific
+  - numpy
+  - pandas
+  - scikit-learn
+  - scipy
+
+  # Bio
+  - biopython
+  - hmmer
+  - prodigal-gv
+  # - mmseqs2
+
+  # Torch
+  - pytorch=2.5.*
+
+  # Utils
+  - matplotlib
+  - tqdm
+  - zstd
+
+  # Optional dev/notebook tools
+  - ipykernel
+  - seaborn
+  - networkx
+
+  - pip:
+      - rich
