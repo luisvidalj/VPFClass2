@@ -272,27 +272,20 @@ def run_user_pipeline(
     if not hmm_models_p.exists():
         raise FileNotFoundError(f"HMM profiles not found: {hmm_models_p}")
     
-    # VPF_parser debería reutilizar .tbl si ya existen en run_dirs.hmmer
+    
     vpf = VPF_parser(
         parser=fasta_parser,
-        hmm_file=str(hmm_models_p),                    # <-- importante
+        hmm_file=str(hmm_models_p),                 
         e_value_threshold=float(e_value_threshold),
         num_cpus=int(num_cpus),
         user = True,
-        vpf_dict_path=Path(vpf_dict_p),                # <-- importante (evita el "hack" de _vpf_dict_path)
-        hmm_output_dir=run_dirs.hmmer,                 # <-- importante: nuestros .tbl van a outdir/hmmer/
+        vpf_dict_path=Path(vpf_dict_p),               
+        hmm_output_dir=run_dirs.hmmer,                
         vector_norm="l2"
     )
 
     vpf.parse_multiple_hmm_parallel()
     
-
-    # Guardamos los hits por virus 
-    # hits_csv = run_dirs.hmmer / "hmm_hits.csv"
-    # vpf.df_virus_hmm.to_csv(hits_csv, index=False)
-    # print(f"[PIPELINE] HMMER completed. Hits per virus saved in: {hits_csv}")
-
-    # Resumen seguro (si faltan columnas, no reventamos)
     try:
         n_pairs = int(len(vpf.df_virus_hmm))
     except Exception:

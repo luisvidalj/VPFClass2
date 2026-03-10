@@ -59,11 +59,12 @@ awk -v n="$SEQ_PER_SPLIT" -v dir="$OUT_DIR" '
 SECONDS=0
 for file in "$OUT_DIR"/split_*.faa; do
   base="${file%.faa}"
-  # --tblout a ${base}.tbl
-  # Redirecciones: stdout -> /dev/null, stderr -> LOG_ERR (append)
   hmmsearch --cpu 2 --tblout "${base}.tbl" "$HMMS_FILE" "$file" >/dev/null 2>>"$LOG_ERR" &
 done
 wait
+
+# 6b) Cleanup intermediate splits (keep only .tbl outputs)
+rm -f "$OUT_DIR"/split_*.faa 2>/dev/null || true
 
 # 7) Reporte de duración
 DUR=$SECONDS

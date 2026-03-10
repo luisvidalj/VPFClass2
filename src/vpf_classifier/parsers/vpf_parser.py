@@ -17,20 +17,6 @@ from vpf_classifier.utils.config import Constants
 from vpf_classifier.parsers.fasta_parser import FastaParser
 
 class VPF_parser:
-    # def __init__(self, parser: FastaParser, hmm_file=Files.HMM_MODELS, e_value_threshold: Optional[float] = Constants.e_value_threshold, num_cpus = 20):
-    #     self.parser = parser
-    #     self.evalue = e_value_threshold
-    #     self.df_hmm = None
-    #     self.df_virus_hmm = None
-
-    #     # Check for existing HMMER .tbl files
-    #     output_tbls = glob.glob(str(Files.HMM_OUTPUT_MULTIPLE / "*.tbl"))
-    #     if output_tbls:
-    #         print(f"[INFO] Existing HMMER output found: {len(output_tbls)} .tbl files")
-    #     else:
-    #         print("[INFO] No HMMER output found. Running hmmsearch assuming 12 CPUs for parallelization")
-    #         self.parser.run_hmmer(hmm_models=hmm_file, output_dir=Files.HMM_OUTPUT_MULTIPLE,num_cpus=num_cpus)
-
     def __init__(
         self,
         parser: FastaParser,
@@ -48,9 +34,9 @@ class VPF_parser:
         self.df_hmm = None
         self.df_virus_hmm = None
 
-        # --- Almacenar overrides ---
         self._vpf_dict_path = vpf_dict_path
-        self._hmm_output_dir = Path(hmm_output_dir) if hmm_output_dir is not None else Files.HMM_OUTPUT_MULTIPLE
+        self._hmm_output_dir = Path(hmm_output_dir) if hmm_output_dir is not None else Path(Files.HMM_OUTPUT_MULTIPLE)
+        self.hmm_file = Path(hmm_file)
         self._num_cpus = num_cpus
         # User mod
         self.user = user
@@ -71,12 +57,7 @@ class VPF_parser:
             print(f"[INFO] HMMER ouput already found.")
 
 
-    # def parse_multiple_hmm(self, unique_hit=False, hmm_output_folder: Optional[str] = Files.HMM_OUTPUT_MULTIPLE):
-    #     attribs = ['id', 'bitscore', 'cluster_num', 'evalue']
-    #     hits = {key: [] for key in ['hmm_name'] + attribs} 
 
-    #     print(f"[INFO] Parsing HMMER .tbl files from {Files.HMM_OUTPUT_MULTIPLE}...")
-    #     output_files = glob.glob(os.path.join(hmm_output_folder, "*.tbl"))
     def parse_multiple_hmm(self, unique_hit: bool = False, hmm_output_folder: Optional[str] = None):
         attribs = ['id', 'bitscore', 'cluster_num', 'evalue']
         hits = {key: [] for key in ['hmm_name'] + attribs}
@@ -150,14 +131,14 @@ class VPF_parser:
 
         folder = Path(hmm_output_folder) if hmm_output_folder else self._hmm_output_dir
         print(f"[INFO] (Parallel) Parsing HMMER .tbl files from {folder}...")
-        output_files = sorted(glob.glob(str(folder / "*.tbl")))  # ordenado por reproducibilidad
+        output_files = sorted(glob.glob(str(folder / "*.tbl")))
 
         if not output_files:
             print("[WARN] No .tbl files found; resulting df_hmm will be empty.")
             self.df_hmm = pd.DataFrame(columns=columns)
-            # Mantiene el mismo flujo aguas abajo
             self._aggregate_by_virus()
-            self._merge_taxonomy()
+            if self.user is False:
+                self._merge_taxonomy()
             self._add_vpf_counts_sparse_fixed()
             return
 
@@ -214,8 +195,8 @@ class VPF_parser:
         ).reset_index()
 
 
+    # Must not be used when the user is providing sequences 
     def _merge_taxonomy(self):
-        print("Si estas vegent aixo en execució d'usuari -> MALO")
         ncbi_df = self.parser.parse_fasta_to_dataframe(return_df=True)
         self.df_virus_hmm = self.df_virus_hmm.merge(ncbi_df, on="Accession", how="left")
 
